@@ -128,4 +128,8 @@ write('pack-fake', pack);
 write('profile-fake', profile);
 write('profile-cash-only', { ...profile, rows: [], gemel: [], hish: [], trades: [], cf: { ...profile.cf, income: '', rent: '', food: '', out: '', car: '', bills: '', health: '', other: '', extra: '' } });
 write('profile-fx-override', { ...profile, fx: '3.5', tradeRate: '' });
+// The in-app "load example" bundle is the same synthetic data, with CPI and a demo marker added to the pack.
+mkdirSync('src/example', { recursive: true });
+writeFileSync('src/example/pack.json', JSON.stringify({ ...pack, demo: true, cpi: { yoyPct: 2.0, label: 'דוגמה' } }) + '\n');
+writeFileSync('src/example/profile.json', JSON.stringify(profile, null, 2) + '\n');
 console.log('fixtures written to', OUT);

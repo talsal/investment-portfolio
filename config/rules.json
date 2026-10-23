@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "_comment": "Calculation rules extracted verbatim from the reference engine. Do not change a value without flagging it.",
+  "fx": { "defaultUsdIls": 3.11 },
+  "criteria": {
+    "pe": { "maxForward": 11, "requiresReliableEarnings": true },
+    "fcf": { "minYieldPct": 8, "minTrendPctPerYear": -10, "roeMinPct": 15 },
+    "moat": { "passesOn": "ok" },
+    "growth": { "passesOn": "up" },
+    "scoreOutOf": 4
+  },
+  "hold": {
+    "redFlags": { "moat": ["bad"], "growth": ["neg"], "fcfTrendBelowPct": 0 },
+    "yellowFlags": { "moat": ["weak", "contested"], "growth": ["slow", "flat"] },
+    "reconsiderAtRedCount": 2
+  },
+  "add": { "requires": { "pe": true, "fcf": true, "moat": "ok", "growthNot": "neg" } },
+  "annualization": { "minHoldingDays": 30, "daysPerYear": 365, "method": "linear" },
+  "dividends": { "netTaxApprox": 0.25, "defaultPaymentsPerYear": 4 },
+  "cashflow": { "cushionMonthsOptions": [3, 6, 9, 12], "defaultCushionMonths": 6 },
+  "limits": { "rows": 60, "funds": 20, "trades": 400 },
+  "currency": { "agorotFactor": 0.01 },
+  "withdrawal": { "_status": "spec pending from owner (see PLAN decision 3)", "timing": "end-of-month" }
+}

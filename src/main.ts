@@ -1,2 +1,5 @@
-// Placeholder entry point; the UI is ported in milestone M1.
-export {};
+import './ui/styles.css';
+import { startApp } from './ui/app';
+
+const root = document.getElementById('app');
+if (root) void startApp(root);

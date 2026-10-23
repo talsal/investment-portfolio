@@ -1,8 +1,36 @@
 # investment-portfolio
 
-Start here: open PROMPT_for_Claude_Code.md and give it to Claude Code from this folder.
+Hebrew RTL personal-wealth dashboard. Static site (GitHub Pages), all user data stays on the device.
 
-- reference/  - the two prototype tools (the *_PRIVATE file has real holdings: it is git-ignored)
-- sample-data/ - example market packs and an example profile (the *_PRIVATE file is git-ignored)
+Status: **M1 done** (parity port, browser-only). See `PROMPT_for_Claude_Code.md` for the full brief and milestones.
 
-Before the first `git push` to GitHub, check `git status` and make sure no *_PRIVATE file is staged.
+## Develop
+
+```bash
+npm install            # also activates the pre-commit guard (core.hooksPath=.githooks)
+npm run dev            # Vite dev server
+npm run build          # typecheck + production build into dist/
+npm test               # unit tests (Vitest)
+npm run test:e2e       # parity + behaviour tests (Playwright; builds and serves dist/)
+npm run test:golden    # reference-engine snapshots (Playwright)
+```
+
+## Layout
+
+- `src/calc/` pure calculations (no DOM, clock injected). `config/rules.json` holds every threshold.
+- `src/ui/` rendering (safe `html` templating, no inline styles/handlers), `src/i18n/he.ts` all Hebrew strings.
+- `src/profile/`, `src/storage/`, `src/data/` profile schema/sanitiser, persistence, market-data loader.
+- `data/` static JSON read by the app (currently a synthetic **demo** pack; the real pipeline is M3).
+- `tests/golden/` the original engine run headless on synthetic fixtures; `tests/e2e/parity.spec.ts` proves the new app renders identical text.
+
+## Parity with the reference engine
+
+`tests/e2e/parity.spec.ts` renders the same fixtures in the original engine and in the new app and compares every
+section (tiles, table cells, totals, notes, chart text). Reviewed, intentional differences are listed in
+`KNOWN_TEXT_CHANGES` in that file; Unicode bidi isolates are ignored. New features are marked
+`data-parity-skip` (inflation/real return, disclaimers, demo notice).
+
+## Private data
+
+`reference/` and `sample-data/` are git-ignored and guarded by `scripts/guard-personal-data.mjs`. Real-data checks run
+locally only: `npm run golden:private`, `npm run parity:private`.

@@ -62,8 +62,11 @@ export async function runReference(browser: Browser, sc: Scenario): Promise<Snap
   return snap;
 }
 
-/** Runs inside the page. Must stay self-contained (no imports, no closures). */
-function extract(): Snapshot {
+/**
+ * Runs inside the page. Must stay self-contained (no imports, no closures). Shared by the reference-engine
+ * harness and the new-app parity test. Elements marked data-parity-skip (new features) are ignored.
+ */
+export function extract(): Snapshot {
   const norm = (s: string | null | undefined) => (s ?? '').replace(/\s+/g, ' ').trim();
   const sectionIds = ['plSection', 'trSection', 'eqSection', 'annSection', 'bfSection', 'wlSection', 'divSection', 'bmSection', 'hsSection', 'evSection', 'cfSection'];
   const sections: Record<string, SectionSnapshot> = {};
@@ -71,8 +74,8 @@ function extract(): Snapshot {
     hidden: !!(el as HTMLElement).hidden,
     tiles: [...el.querySelectorAll('.cf-tile')].map((t) => [...t.querySelectorAll('.k, .v, .s')].map((c) => norm(c.textContent))),
     tables: [...el.querySelectorAll('table')].map((tb) => [...tb.rows].map((r) => [...r.cells].map((c) => norm(c.textContent)))),
-    totals: [...el.querySelectorAll('.compare-total')].map((c) => norm(c.textContent)),
-    notes: [...el.querySelectorAll('.rate-note')].map((c) => norm(c.textContent)),
+    totals: [...el.querySelectorAll('.compare-total')].filter((c) => !c.closest('[data-parity-skip]')).map((c) => norm(c.textContent)),
+    notes: [...el.querySelectorAll('.rate-note')].filter((c) => !c.closest('[data-parity-skip]')).map((c) => norm(c.textContent)),
     svgTexts: [...el.querySelectorAll('svg text')].map((c) => norm(c.textContent)),
   });
   for (const id of sectionIds) {

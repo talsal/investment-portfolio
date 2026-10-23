@@ -5,7 +5,14 @@ export default defineConfig({
   testMatch: ['golden/**/*.spec.ts', 'e2e/**/*.spec.ts'],
   fullyParallel: true,
   reporter: [['list']],
+  webServer: {
+    command: 'npm run build && npx vite preview --port 4173 --strictPort',
+    url: 'http://localhost:4173',
+    reuseExistingServer: false, // a stale preview server would silently test an old build
+    timeout: 120_000,
+  },
   use: {
+    baseURL: 'http://localhost:4173',
     locale: 'he-IL',
     timezoneId: 'Asia/Jerusalem',
     colorScheme: 'light',
