@@ -44,7 +44,8 @@ export function buildProviders(env: Env, now: () => Date = () => new Date()): Pr
   const finnhub = fh ? makeFinnhub({ apiKey: fh, now }) : null;
 
   function pick<T>(capability: keyof Omit<Providers, 'skipped'>, envName: string, def: string | null, table: Record<string, Maker<T>>): T | undefined {
-    const id = (env[envName] ?? def ?? '').trim().toLowerCase();
+    // Empty strings count as unset: GitHub passes unset repository variables as '' to the job.
+    const id = (env[envName] || def || '').trim().toLowerCase();
     if (!id) return undefined;
     const m = table[id];
     if (!m) { out.skipped.push({ capability, id, reason: 'unknown-provider' }); return undefined; }

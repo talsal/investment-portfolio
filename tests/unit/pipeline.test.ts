@@ -320,3 +320,13 @@ describe('http helper', () => {
     await expect(getText('https://a.b/?apikey=SECRET', { fetchImpl: down, retries: 0 })).rejects.toSatisfy((e: Error) => !e.message.includes('SECRET'));
   }, 20000);
 });
+
+describe('provider selection with empty variables (as GitHub passes unset repository variables)', () => {
+  it('treats empty strings as unset, so defaults still apply', () => {
+    const P = buildProviders({ DATA_LICENSE_ACK: 'boi', FX_PROVIDER: '', CPI_PROVIDER: '', HISTORY_PROVIDER: '', QUOTE_PROVIDER: '', CALENDAR_PROVIDER: '', TWELVEDATA_API_KEY: '', FINNHUB_API_KEY: '' });
+    expect(P.fx?.info.id).toBe('boi');
+    expect(P.cpi?.info.id).toBe('cbs');
+    expect(P.history).toBeUndefined();
+    expect(P.skipped).toEqual([]);
+  });
+});
