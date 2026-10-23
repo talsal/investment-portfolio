@@ -69,6 +69,14 @@ function gate(): Raw {
   </section>`;
 }
 
+function freshnessCard(): Raw {
+  return html`<details class="in-card" id="freshness" data-parity-skip hidden>
+    <summary>${he.freshness.h}: <span id="freshSummary"></span></summary>
+    <ul class="fresh-list" id="freshList"></ul>
+    <p class="in-msg bad" id="freshStale" hidden></p>
+  </details>`;
+}
+
 function storageCard(): Raw {
   const K = he.storage.card, S = he.storage.switchPanel;
   return html`<details class="in-card" id="storageCard">
@@ -114,6 +122,7 @@ export function buildShell(root: HTMLElement): void {
     <div class="nudge" id="backupNudge" role="status" hidden></div>
     <p class="rate-note mnotice" data-parity-skip>${rich(T.app.notice)}</p>
     <p id="demoNotice" role="status" hidden data-parity-skip>${T.app.demoNotice}</p>
+    ${freshnessCard()}
     ${storageCard()}
     ${editorCard()}
     <div id="outEmpty" class="empty-box">${T.app.emptyBox}</div>

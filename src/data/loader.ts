@@ -1,49 +1,89 @@
-import type { MarketData, TickerPack } from '../calc/types';
+import type { MarketData } from '../calc/types';
+import { composeMarket, emptyBundle, type DataBundle } from './compose';
+import { DATA_SCHEMA } from './schema';
+import { isSymbol, parseAnalysisFile, parseCpiFile, parseFundamentalsFile, parseHistoryFile, parseManualFile, parseMarketFile } from './validate';
 
-const isObj = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v);
+/** Fetches and parses one JSON file; null when missing, unreachable or not JSON. */
+export type Fetcher = (url: string) => Promise<unknown | null>;
 
-/** Coerces untrusted JSON into MarketData. Drops anything of the wrong shape; never throws. */
-export function sanitizeMarket(o: unknown): MarketData {
-  const M: MarketData = { tickers: {} };
-  if (!isObj(o)) return M;
-  if (typeof o.asof === 'string') M.asof = o.asof;
-  if (typeof o.fx === 'number' && isFinite(o.fx) && o.fx > 0) M.fx = o.fx;
-  if (isObj(o.bm) && typeof o.bm.date === 'string' && typeof o.bm.spyBase === 'number' && typeof o.bm.spyCur === 'number') {
-    M.bm = { date: o.bm.date, dateLabel: typeof o.bm.dateLabel === 'string' ? o.bm.dateLabel : undefined, spyBase: o.bm.spyBase, spyCur: o.bm.spyCur };
-  }
-  if (isObj(o.hist) && Array.isArray(o.hist.dates) && Array.isArray(o.hist.spy) && isObj(o.hist.close)) {
-    M.hist = { dates: o.hist.dates as string[], spy: o.hist.spy as number[], close: o.hist.close as Record<string, number[]>, fx: Array.isArray(o.hist.fx) ? (o.hist.fx as number[]) : undefined };
-  }
-  if (isObj(o.tickers)) {
-    for (const [k, v] of Object.entries(o.tickers)) {
-      if (isObj(v) && typeof v.price === 'number' && isFinite(v.price)) M.tickers[k.toUpperCase()] = v as unknown as TickerPack;
-    }
-  }
-  if (isObj(o.cpi) && typeof o.cpi.yoyPct === 'number' && typeof o.cpi.label === 'string') M.cpi = { yoyPct: o.cpi.yoyPct, label: o.cpi.label };
-  if (o.demo === true) M.demo = true;
-  return M;
-}
-
-async function getJson(url: string): Promise<unknown> {
-  const res = await fetch(url, { cache: 'no-cache' });
-  if (!res.ok) throw new Error(`${url}: HTTP ${res.status}`);
-  return res.json();
-}
-
-export interface LoadedMarket { M: MarketData; ok: boolean }
-
-/** Loads the static market pack (and optional CPI) from /data. A failure yields an empty pack, not an exception. */
-export async function loadMarket(base = './data/'): Promise<LoadedMarket> {
-  let M: MarketData = { tickers: {} }, ok = false;
-  try { M = sanitizeMarket(await getJson(`${base}market-pack.json`)); ok = true; } catch { /* degrade: price-only, no analysis */ }
+export const fetchJson: Fetcher = async (url) => {
   try {
-    const cpi = (await getJson(`${base}cpi.json`)) as { yoyPct?: unknown; label?: unknown };
-    if (typeof cpi.yoyPct === 'number' && typeof cpi.label === 'string') M.cpi = { yoyPct: cpi.yoyPct, label: cpi.label };
-  } catch { /* optional */ }
-  return { M, ok };
+    const res = await fetch(url, { cache: 'no-cache' });
+    return res.ok ? await res.json() : null;
+  } catch {
+    return null;
+  }
+};
+
+export interface Wanted {
+  /** Stocks the user holds: fundamentals, analysis, manual data and price history are loaded. */
+  held: string[];
+  /** Stocks that were ever traded (their history feeds the progress chart). */
+  traded: string[];
+  /** Watchlist: fundamentals, analysis and manual data only. */
+  watch: string[];
 }
 
-export async function loadExampleBundle(): Promise<{ profile: unknown; market: MarketData }> {
-  const [profile, pack] = await Promise.all([import('../example/profile.json'), import('../example/pack.json')]);
-  return { profile: profile.default, market: sanitizeMarket(pack.default) };
+/**
+ * Loads the static data files on demand. The core files (market, CPI) are fetched once; per-ticker files are
+ * fetched only for tickers the user cares about and that exist in market.json. Failures never throw: a missing or
+ * malformed file simply leaves that data out, and the freshness panel says so.
+ */
+export class DataLoader {
+  private bundle: DataBundle = emptyBundle();
+  private tried = new Set<string>();
+  private composed: MarketData | null = null;
+  coreLoaded = false;
+
+  constructor(private base = './data/', private get: Fetcher = fetchJson) {}
+
+  async loadCore(): Promise<boolean> {
+    const [market, cpi] = await Promise.all([this.get(`${this.base}market.json`), this.get(`${this.base}cpi.json`)]);
+    this.bundle.market = parseMarketFile(market);
+    this.bundle.cpi = parseCpiFile(cpi);
+    this.coreLoaded = !!this.bundle.market;
+    this.composed = null;
+    return this.coreLoaded;
+  }
+
+  private async one<T>(key: string, path: string, parse: (o: unknown) => T | null, put: (v: T) => void): Promise<boolean> {
+    if (this.tried.has(key)) return false;
+    this.tried.add(key);
+    const v = parse(await this.get(`${this.base}${path}`));
+    if (v === null) return false;
+    put(v);
+    return true;
+  }
+
+  /** Loads whatever the given tickers need and is not loaded yet. Returns true when new data arrived. */
+  async ensure(w: Wanted): Promise<boolean> {
+    const m = this.bundle.market;
+    if (!m) return false;
+    const known = (s: string) => isSymbol(s) && Object.prototype.hasOwnProperty.call(m.tickers, s);
+    const analyse = [...new Set([...w.held, ...w.watch])].filter(known);
+    const hist = [...new Set([...w.held, ...w.traded])].filter(known);
+    const jobs: Array<Promise<boolean>> = [];
+    // market.json says which files exist (`has`); without that hint (older files) every kind is tried.
+    const has = (s: string, kind: 'fundamentals' | 'analysis' | 'manual' | 'history') => { const h = m.tickers[s]?.has; return !h || h.includes(kind); };
+    for (const s of analyse) {
+      if (has(s, 'fundamentals')) jobs.push(this.one(`f:${s}`, `fundamentals/${s}.json`, parseFundamentalsFile, (v) => { this.bundle.fundamentals[s] = v; }));
+      if (has(s, 'analysis')) jobs.push(this.one(`a:${s}`, `analysis/${s}.json`, parseAnalysisFile, (v) => { this.bundle.analysis[s] = v; }));
+      if (has(s, 'manual')) jobs.push(this.one(`m:${s}`, `manual/${s}.json`, parseManualFile, (v) => { this.bundle.manual[s] = v; }));
+    }
+    if (hist.length) {
+      const bench = m.benchmark?.symbol ?? 'SPY';
+      jobs.push(this.one('h:bench', `history/${bench}.json`, parseHistoryFile, (v) => { this.bundle.spy = v; }));
+      jobs.push(this.one('h:fx', 'history/_USDILS.json', parseHistoryFile, (v) => { this.bundle.usdIls = v; }));
+      for (const s of hist.filter((x) => has(x, 'history'))) jobs.push(this.one(`h:${s}`, `history/${s}.json`, parseHistoryFile, (v) => { this.bundle.history[s] = v; }));
+    }
+    const changed = (await Promise.all(jobs)).some(Boolean);
+    if (changed) this.composed = null;
+    return changed;
+  }
+
+  market(): MarketData {
+    return (this.composed ??= composeMarket(this.bundle));
+  }
+
+  get schema(): number { return DATA_SCHEMA; }
 }

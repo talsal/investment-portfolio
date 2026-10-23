@@ -10,8 +10,12 @@ export interface Criteria {
   peT: number | null;
   peF: number | null;
   pePass: boolean;
+  /** True when an input the P/E rule needs is missing: shown as "no data" rather than a failure. Still scores 0. */
+  peNa: boolean;
   fcfYield: number | null;
   fcfPass: boolean;
+  /** Same for the FCF rule (needs FCF and its trend, or ROE for financials). */
+  fcfNa: boolean;
   moatPass: boolean;
   growthPass: boolean;
   /** Number of criteria passed, out of 4. A partial state counts as not passing. */
@@ -32,9 +36,11 @@ export function evaluateCriteria(inp: BfInputs, px: number): Criteria {
   const fcfPass = inp.fcfPs
     ? (fcfYield as number) >= R.fcf.minYieldPct && (inp.fcfTrend ?? NaN) >= R.fcf.minTrendPctPerYear
     : (inp.roe ?? NaN) >= R.fcf.roeMinPct;
+  const peNa = !inp.epsF;
+  const fcfNa = inp.fcfPs ? inp.fcfTrend === undefined || inp.fcfTrend === null : inp.roe === undefined || inp.roe === null;
   const moatPass = inp.moat === R.moat.passesOn;
   const growthPass = inp.growth === R.growth.passesOn;
-  return { peT, peF, pePass, fcfYield, fcfPass, moatPass, growthPass, pass: +pePass + +fcfPass + +moatPass + +growthPass };
+  return { peT, peF, pePass, peNa, fcfYield, fcfPass, fcfNa, moatPass, growthPass, pass: +pePass + +fcfPass + +moatPass + +growthPass };
 }
 
 export function holdAssessment(inp: BfInputs) {

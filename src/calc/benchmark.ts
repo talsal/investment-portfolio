@@ -15,8 +15,11 @@ const isoToLabel = (d: string) => `${d.slice(8, 10)}.${d.slice(5, 7)}.${d.slice(
 
 /** Index of the last history date <= d (0 when d precedes the first date). */
 export function lastIndexLE(dates: string[], d: string): number {
-  let k = 0;
-  for (let j = 0; j < dates.length; j++) { if ((dates[j] as string) <= d) k = j; else break; }
+  let lo = 0, hi = dates.length - 1, k = 0;
+  while (lo <= hi) {
+    const mid = (lo + hi) >> 1;
+    if ((dates[mid] as string) <= d) { k = mid; lo = mid + 1; } else hi = mid - 1;
+  }
   return k;
 }
 
@@ -30,23 +33,29 @@ export type BenchmarkError = 'noHistory' | 'beforeHistory';
 export function resolveBenchmark(M: MarketData, P: Profile): ResolvedBenchmark | { error: BenchmarkError } | null {
   const userDate = P.settings.benchmarkDate;
   const H = M.hist;
-  if (userDate) {
-    if (!H || !H.dates.length || !H.spy.length) return { error: 'noHistory' };
-    if (userDate < (H.dates[0] as string)) return { error: 'beforeHistory' };
-    const i = lastIndexLE(H.dates, userDate);
+  const fromHistory = (date: string, custom: boolean): ResolvedBenchmark | { error: BenchmarkError } | null => {
+    if (!H || !H.dates.length || !H.spy.length) return custom ? { error: 'noHistory' } : null;
+    if (date < (H.dates[0] as string)) {
+      if (custom) return { error: 'beforeHistory' };
+      date = H.dates[0] as string; // default date older than the data: start of the data
+    }
+    const i = lastIndexLE(H.dates, date);
     const spyBase = H.spy[i] as number;
-    const spyCur = M.bm?.spyCur ?? (H.spy[H.spy.length - 1] as number);
+    const spyCur = M.spyNow ?? M.bm?.spyCur ?? (H.spy[H.spy.length - 1] as number);
     return {
-      date: H.dates[i] as string, dateLabel: isoToLabel(H.dates[i] as string), spyBase, spyCur, custom: true,
+      date: H.dates[i] as string, dateLabel: isoToLabel(H.dates[i] as string), spyBase, spyCur, custom,
       baseCloseOf: (t) => H.close[normTicker(t)]?.[i],
     };
-  }
-  const bm = M.bm;
-  if (!bm) return null;
-  return {
-    date: bm.date, dateLabel: bm.dateLabel || bm.date, spyBase: bm.spyBase, spyCur: bm.spyCur, custom: false,
-    baseCloseOf: (_t, pack) => pack?.baseClose,
   };
+  if (userDate) return fromHistory(userDate, true);
+  const bm = M.bm;
+  if (bm) {
+    return {
+      date: bm.date, dateLabel: bm.dateLabel || bm.date, spyBase: bm.spyBase, spyCur: bm.spyCur, custom: false,
+      baseCloseOf: (_t, pack) => pack?.baseClose,
+    };
+  }
+  return M.benchmarkDefaultDate ? fromHistory(M.benchmarkDefaultDate, false) : null;
 }
 
 export function benchmarkComparison(C: Computed, bm: ResolvedBenchmark) {

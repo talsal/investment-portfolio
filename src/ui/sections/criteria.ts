@@ -2,16 +2,18 @@ import { addAssessment, evaluateCriteria, holdAssessment, watchMissing, type Cri
 import type { Held } from '../../calc/portfolio';
 import type { BfInputs, TickerPack } from '../../calc/types';
 import { RULES } from '../../config/rules';
+import { REQUEST_TICKER_URL } from '../../config/site';
 import { he } from '../../i18n/he';
 import { $, dataTable, show, td, th, tr, why } from '../dom';
 import type { Ctx } from '../context';
 import { fmtNis, fmtUsd } from '../format';
 import { html, setHtml, type Raw } from '../html';
 
-const MOAT_TONE: Record<string, string> = { ok: 'c-gain', weak: 'c-sec', bad: 'c-loss', none: 'c-muted', contested: 'c-sec' };
-const GROWTH_TONE: Record<string, string> = { up: 'c-gain', slow: 'c-sec', flat: 'c-sec', neg: 'c-loss', na: 'c-muted' };
+const MOAT_TONE: Record<string, string> = { ok: 'c-gain', weak: 'c-sec', bad: 'c-loss', none: 'c-muted', contested: 'c-sec', unavailable: 'c-muted' };
+const GROWTH_TONE: Record<string, string> = { up: 'c-gain', slow: 'c-sec', flat: 'c-sec', neg: 'c-loss', na: 'c-muted', unavailable: 'c-muted' };
 const tag = (cls: string, t: string): Raw => html`<span class="tag ${cls}">${t}</span>`;
-const verdict = (pass: boolean): Raw => html`<span class="${pass ? 'bf-pass' : 'bf-fail'}">${pass ? he.criteria.pass : he.criteria.fail}</span>`;
+const verdict = (pass: boolean, na = false): Raw =>
+  na ? html`<span class="tag c-muted">${he.criteria.na}</span>` : html`<span class="${pass ? 'bf-pass' : 'bf-fail'}">${pass ? he.criteria.pass : he.criteria.fail}</span>`;
 
 /** The four criteria cells (P/E, FCF, moat, growth) shared by the holdings and watchlist tables. */
 function criteriaCells(inp: BfInputs, px: number, c: Criteria) {
@@ -20,18 +22,21 @@ function criteriaCells(inp: BfInputs, px: number, c: Criteria) {
   if (inp.epsN) peNotes.push(T.peNoCovers((px / inp.epsN).toFixed(1)));
   if (inp.bv) peNotes.push(T.peBook((px / inp.bv).toFixed(2)));
   if (inp.pen) peNotes.push(inp.pen);
-  const pe = td(html`${verdict(c.pePass)}${why(T.peLine(c.peT !== null ? c.peT.toFixed(1) : null, c.peF !== null ? c.peF.toFixed(1) : null))}${peNotes.map((n) => why(n))}`, false, 'minw');
+  const pe = td(html`${verdict(c.pePass, c.peNa)}${why(T.peLine(c.peT !== null ? c.peT.toFixed(1) : null, c.peF !== null ? c.peF.toFixed(1) : null))}${peNotes.map((n) => why(n))}`, false, 'minw');
   const trend = inp.fcfTrend ?? 0;
   const fcfLines = inp.fcfPs
-    ? [T.fcfCash(inp.fcfTotal ?? ''), T.fcfYield((c.fcfYield as number).toFixed(1)), T.fcfTrend(trend >= 0, Math.abs(trend))]
+    ? [inp.fcfTotal ? T.fcfCash(inp.fcfTotal) : '', T.fcfYield((c.fcfYield as number).toFixed(1)), inp.fcfTrend === undefined || inp.fcfTrend === null ? T.trendNA : T.fcfTrend(trend >= 0, Math.abs(trend))].filter(Boolean)
     : [T.fcfNA(inp.roe)];
-  const fcf = td(html`${verdict(c.fcfPass)}${[...fcfLines, ...(inp.fcfNotes ?? [])].map((n) => why(n))}`, false, 'minw');
-  const moatKey = (inp.moat && inp.moat in T.moat ? inp.moat : 'none') as keyof typeof T.moat;
-  const growthKey = (inp.growth && inp.growth in T.growth ? inp.growth : 'na') as keyof typeof T.growth;
+  const fcf = td(html`${verdict(c.fcfPass, c.fcfNa)}${[...fcfLines, ...(inp.fcfNotes ?? [])].map((n) => why(n))}`, false, 'minw');
+  const moatKey = (inp.moat === undefined ? 'unavailable' : inp.moat in T.moat ? inp.moat : 'none') as keyof typeof T.moat;
+  const growthKey = (inp.growth === undefined ? 'unavailable' : inp.growth in T.growth ? inp.growth : 'na') as keyof typeof T.growth;
   const moat = td(html`${tag(MOAT_TONE[moatKey] as string, T.moat[moatKey])}${why(inp.moatTxt || '')}`);
   const growth = td(html`${tag(GROWTH_TONE[growthKey] as string, T.growth[growthKey])}${why(inp.growthTxt || '')}${inp.track ? why(T.track(inp.track)) : ''}`);
   return { pe, fcf, moat, growth };
 }
+
+/** " Request this ticker" link to the repository's issue form, when the site knows its repository. */
+const requestLink = (): Raw | '' => (REQUEST_TICKER_URL ? html` <a href="${REQUEST_TICKER_URL}" target="_blank" rel="noopener noreferrer">${he.request.link}</a>` : '');
 
 const signedPct = (v: number) => (v >= 0 ? '+' : '-') + Math.abs(v).toFixed(1) + '%';
 
@@ -85,7 +90,7 @@ export function renderAnalysis(ctx: Ctx): boolean {
   }
   const pend = $('anaPending');
   pend.hidden = !pending.length;
-  if (pending.length) pend.textContent = he.analysis.pending(pending.join(', '));
+  if (pending.length) setHtml(pend, html`${he.analysis.pending(pending.join(', '))}${requestLink()}`);
 
   // Watchlist: the user's own list, minus anything already held. Tickers without analysis are listed as such.
   const heldT = new Set(C.held.map((h) => h.T));
@@ -95,7 +100,7 @@ export function renderAnalysis(ctx: Ctx): boolean {
   show('wlSection', mine.length > 0);
   const wlPend = $('wlPending');
   wlPend.hidden = !noAnalysis.length;
-  if (noAnalysis.length) wlPend.textContent = he.watch.noAnalysis(noAnalysis.join(', '));
+  if (noAnalysis.length) setHtml(wlPend, html`${he.watch.noAnalysis(noAnalysis.join(', '))}${requestLink()}`);
   if (!wl.length) { setHtml($('wlTable'), ''); $('wlNote').textContent = ''; }
   if (wl.length) {
     hasAny = true;

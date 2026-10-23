@@ -18,11 +18,17 @@
     "prepare": "git config core.hooksPath .githooks",
     "parity:private": "GOLDEN_PRIVATE=1 playwright test tests/e2e --grep @private",
     "test:e2e": "playwright test tests/e2e",
-    "test:all": "vitest run && playwright test"
+    "test:all": "vitest run && playwright test",
+    "data:market": "tsx scripts/data/refresh-market.ts",
+    "data:fundamentals": "tsx scripts/data/refresh-fundamentals.ts",
+    "data:validate": "tsx scripts/data/validate-data.ts",
+    "data:probe": "tsx scripts/data/probe.ts",
+    "data:reindex": "tsx -e \"import('./scripts/data/reindex.ts').then(m=>console.log(m.reindex(process.env.DATA_DIR??'data')?'market.json updated':'no change'))\""
   },
   "devDependencies": {
     "@playwright/test": "^1.64.1",
     "@types/node": "^26.6.5",
+    "tsx": "^4.23.15",
     "typescript": "^7.0.2",
     "vite": "^8.3.5",
     "vitest": "^5.0.5"

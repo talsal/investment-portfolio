@@ -1,0 +1,30 @@
+name: Request a ticker
+description: Ask for a stock to be added to the data the site can analyse
+title: 'Add ticker: '
+labels: [ticker-request]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        The site is static: it can only show analysis for tickers that exist in `data/`. Tickers outside it show
+        your own prices without analysis. Requests are reviewed by the owner and may be declined (data licences,
+        API quotas). Informational tool, not investment advice.
+  - type: input
+    id: symbol
+    attributes:
+      label: Ticker symbol
+      description: US-listed symbol, e.g. MSFT or BRK.B
+      placeholder: MSFT
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Anything else we should know? (optional)
+  - type: checkboxes
+    id: ack
+    attributes:
+      label: Acknowledgement
+      options:
+        - label: I understand the analysis is informational and not investment advice.
+          required: true

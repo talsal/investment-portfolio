@@ -51,4 +51,20 @@ export interface MarketData {
   cpi?: { yoyPct: number; label: string };
   /** Marks synthetic data that must never be presented as real. */
   demo?: boolean;
+  /** Benchmark base date used when the user has not chosen one (derived from price history). */
+  benchmarkDefaultDate?: string;
+  /** Latest S&P 500 proxy price, when newer than the last history point. */
+  spyNow?: number;
+  /** Provenance for the freshness display (absent for the bundled example). */
+  meta?: MarketMeta;
+}
+
+export interface MarketMeta {
+  groups: Partial<Record<'fx' | 'quotes' | 'benchmark' | 'calendar' | 'cpi', { state: 'ok' | 'stale' | 'unavailable'; asof: string | null; fetchedAt: string | null; source: string; note?: string }>>;
+  /** Per-ticker date of the fundamentals used (YYYY-MM-DD). */
+  fundamentalsAsof: Record<string, string>;
+  /** Tickers whose latest price is carried over from an earlier run. */
+  stalePrices: string[];
+  cpiAsof: string | null;
+  historyAsof: string | null;
 }

@@ -2,7 +2,7 @@
 
 Hebrew RTL personal-wealth dashboard. Static site (GitHub Pages), all user data stays on the device.
 
-Status: **M2 done** (storage modes, versioned export/import). M1: parity port. See `PROMPT_for_Claude_Code.md` for the full brief and milestones.
+Status: **M3 done** (data pipeline + freshness UI). M2: storage modes. M1: parity port. See `PROMPT_for_Claude_Code.md` for the full brief and milestones.
 
 ## Develop
 
@@ -13,6 +13,8 @@ npm run build          # typecheck + production build into dist/
 npm test               # unit tests (Vitest)
 npm run test:e2e       # parity + behaviour tests (Playwright; builds and serves dist/)
 npm run test:golden    # reference-engine snapshots (Playwright)
+npm run data:market    # refresh data/ (needs provider keys / licence acknowledgement; see docs)
+npm run data:validate  # strict check of every file under data/
 ```
 
 ## Layout
@@ -20,7 +22,7 @@ npm run test:golden    # reference-engine snapshots (Playwright)
 - `src/calc/` pure calculations (no DOM, clock injected). `config/rules.json` holds every threshold.
 - `src/ui/` rendering (safe `html` templating, no inline styles/handlers), `src/i18n/he.ts` all Hebrew strings.
 - `src/profile/` schema, sanitiser and the versioned backup format; `src/storage/` the storage controller (browser and file modes); `src/data/` market-data loader. See `docs/storage.md`.
-- `data/` static JSON read by the app (currently a synthetic **demo** pack; the real pipeline is M3).
+- `data/` static JSON read by the app, refreshed by GitHub Actions; `providers/` vendor adapters; `scripts/data/` the refresh jobs. See `docs/data-pipeline.md` (including provider terms and the licence gate).
 - `tests/golden/` the original engine run headless on synthetic fixtures; `tests/e2e/parity.spec.ts` proves the new app renders identical text.
 
 ## Parity with the reference engine

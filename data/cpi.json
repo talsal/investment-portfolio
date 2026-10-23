@@ -1,5 +1,8 @@
 {
-  "yoyPct": null,
-  "label": "",
-  "_note": "Fill manually: yoyPct = latest 12-month Israeli CPI change in percent; label = month, e.g. \"ספטמבר 2026\""
+  "schema": 1,
+  "yoyPct": 1.6,
+  "label": "ספטמבר 2026",
+  "asof": "2026-09",
+  "fetchedAt": "2026-10-23T11:59:00.664Z",
+  "source": "cbs"
 }

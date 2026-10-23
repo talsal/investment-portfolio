@@ -89,5 +89,20 @@
     "nudgeDays": 14,
     "maxFileBytes": 524288,
     "snoozeDays": 3
+  },
+  "freshness": {
+    "_comment": "Calendar days after which a data group is shown as stale.",
+    "staleAfterDays": {
+      "fx": 4,
+      "quotes": 4,
+      "benchmark": 4,
+      "calendar": 10,
+      "cpi": 50,
+      "fundamentals": 120,
+      "history": 7
+    }
+  },
+  "history": {
+    "years": 5
   }
 }

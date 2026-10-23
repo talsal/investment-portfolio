@@ -1,6 +1,7 @@
 import { compute } from '../calc/portfolio';
 import type { MarketData, Profile } from '../calc/types';
-import { loadExampleBundle, loadMarket } from '../data/loader';
+import { loadExampleBundle } from '../data/legacyPack';
+import { DataLoader } from '../data/loader';
 import { he } from '../i18n/he';
 import { blankProfile, sanitizeProfile } from '../profile/schema';
 import { browserDeps } from '../storage/browserDeps';
@@ -15,6 +16,7 @@ import { renderAnalysis } from './sections/criteria';
 import { bindHistoryModes, renderHistory } from './sections/historyChart';
 import { renderPie } from './sections/pie';
 import { renderBenchmark, renderDividends, renderEquity, renderAnnual, renderEvents, renderProfitTotal, renderTotals } from './sections/summary';
+import { renderFreshness } from './sections/freshnessPanel';
 import { renderWithdrawal, syncWithdrawalInputs } from './sections/withdrawal';
 import { wireStorageUi } from './storageUi';
 
@@ -25,9 +27,16 @@ export async function startApp(root: HTMLElement): Promise<void> {
   applyTheme(loadTheme());
   const ctrl = new StorageController(browserDeps());
   let P: Profile = blankProfile();
-  let liveMarket: MarketData = { tickers: {} };
+  const loader = new DataLoader();
   let exampleMarket: MarketData | null = null;
-  const market = (): MarketData => (P.settings.example && exampleMarket ? exampleMarket : liveMarket);
+  const market = (): MarketData => (P.settings.example && exampleMarket ? exampleMarket : loader.market());
+
+  /** Loads per-ticker data files for what the user holds, traded or follows; re-renders when something new arrived. */
+  function ensureData() {
+    const held = P.rows.filter((r) => r.c === 'USD').map((r) => r.t.toUpperCase().replace(/\s+/g, ''));
+    const traded = P.trades.map((t) => t.t);
+    void loader.ensure({ held, traded, watch: P.watchlist }).then((changed) => { if (changed) render(); });
+  }
   const setStatus = (t: string) => { $('inStatus').textContent = t; };
 
   let firstView = true;
@@ -58,6 +67,7 @@ export async function startApp(root: HTMLElement): Promise<void> {
     any = renderHistory(ctx) || any || !$('divSection').hidden || !$('bmSection').hidden || !$('evSection').hidden;
     show('anaTitle', any);
     renderCashFlow(ctx);
+    renderFreshness(ctx);
     $('demoNotice').hidden = !M.demo;
   }
 
@@ -70,7 +80,7 @@ export async function startApp(root: HTMLElement): Promise<void> {
       P = next;
       rebuild();
       if (P.settings.example && !exampleMarket) void loadExampleBundle().then((b) => { exampleMarket = b.market; render(); });
-      if (markChanged) afterEdit(); else { render(); ui.refresh(); }
+      if (markChanged) afterEdit(); else { render(); ui.refresh(); ensureData(); }
     },
     showState: showView,
     setStatus,
@@ -88,6 +98,7 @@ export async function startApp(root: HTMLElement): Promise<void> {
     }
     render();
     ui.refresh();
+    ensureData();
   }
 
   wireEditor(() => P, { onEdit: afterEdit, onStructure: () => { buildEditor(P); afterEdit(); } });
@@ -154,10 +165,10 @@ export async function startApp(root: HTMLElement): Promise<void> {
   else showView('chooser');
   ui.refresh();
   render();
-  const loaded = await loadMarket();
-  liveMarket = loaded.M;
+  await loader.loadCore();
   if (P.settings.example) exampleMarket = (await loadExampleBundle()).market;
   render();
+  ensureData();
 }
 
 function applyTheme(t: Theme): void {

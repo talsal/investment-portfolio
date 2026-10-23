@@ -1,0 +1,51 @@
+name: Refresh market data
+
+on:
+  schedule:
+    # 22:15 UTC, Monday-Friday: after the US close in both winter and summer time, and after the Bank of Israel
+    # revises the representative rate (about 15:45 Israel time). Scheduled runs can start a few minutes late.
+    - cron: '15 22 * * 1-5'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: data-refresh
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - name: Refresh prices, FX, history, calendar and CPI
+        run: npm run data:market
+        env:
+          # Keys live in repository secrets. Provider choice and the licence acknowledgement are repository
+          # variables (Settings > Secrets and variables > Actions > Variables).
+          TWELVEDATA_API_KEY: ${{ secrets.TWELVEDATA_API_KEY }}
+          FINNHUB_API_KEY: ${{ secrets.FINNHUB_API_KEY }}
+          TASE_API_KEY: ${{ secrets.TASE_API_KEY }}
+          DATA_LICENSE_ACK: ${{ vars.DATA_LICENSE_ACK }}
+          FX_PROVIDER: ${{ vars.FX_PROVIDER }}
+          CPI_PROVIDER: ${{ vars.CPI_PROVIDER }}
+          HISTORY_PROVIDER: ${{ vars.HISTORY_PROVIDER }}
+          QUOTE_PROVIDER: ${{ vars.QUOTE_PROVIDER }}
+          CALENDAR_PROVIDER: ${{ vars.CALENDAR_PROVIDER }}
+          PACING_MS: ${{ vars.PACING_MS }}
+      - name: Validate data files
+        run: npm run data:validate
+      - name: Commit changes
+        run: |
+          git add data
+          if git diff --cached --quiet; then echo "No data changes."; exit 0; fi
+          git config user.name "data-bot"
+          git config user.email "data-bot@users.noreply.github.com"
+          git commit -m "data: market refresh $(date -u +%F)"
+          git pull --rebase origin "${GITHUB_REF_NAME}"
+          git push origin "HEAD:${GITHUB_REF_NAME}"

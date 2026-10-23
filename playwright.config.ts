@@ -10,6 +10,8 @@ export default defineConfig({
     url: 'http://localhost:4173',
     reuseExistingServer: false, // a stale preview server would silently test an old build
     timeout: 120_000,
+    // Lets the request-a-ticker link render in tests.
+    env: { VITE_REPO_URL: 'https://github.com/example-owner/portfolio-site' },
   },
   use: {
     baseURL: 'http://localhost:4173',

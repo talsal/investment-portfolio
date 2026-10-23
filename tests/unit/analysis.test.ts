@@ -227,3 +227,19 @@ describe('buildHistory', () => {
     expect(buildHistory(profile(), M, 3)).toBeNull();
   });
 });
+
+describe('missing inputs are "no data", not failures', () => {
+  it('flags P/E as n/a without forward EPS, but still scores it as not passed', () => {
+    const c = evaluateCriteria({ ...good, epsF: null }, 50);
+    expect(c.peNa).toBe(true);
+    expect(c.pePass).toBe(false);
+    expect(c.pass).toBe(3);
+    expect(evaluateCriteria(good, 50).peNa).toBe(false);
+  });
+  it('flags FCF as n/a when the trend (or ROE for financials) is missing', () => {
+    expect(evaluateCriteria({ ...good, fcfTrend: undefined }, 100).fcfNa).toBe(true);
+    expect(evaluateCriteria({ ...good, fcfPs: undefined, roe: undefined }, 100).fcfNa).toBe(true);
+    expect(evaluateCriteria({ ...good, fcfPs: undefined, roe: 20 }, 100).fcfNa).toBe(false);
+    expect(evaluateCriteria({ ...good, fcfTrend: undefined }, 100).fcfPass).toBe(false);
+  });
+});

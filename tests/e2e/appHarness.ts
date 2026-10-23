@@ -1,5 +1,6 @@
 import type { Browser, Page } from '@playwright/test';
 import { FROZEN_NOW, extract, type Scenario, type Snapshot } from '../golden/harness';
+import { packToFiles } from '../support/dataFiles';
 
 export const PROFILE_KEY = 'portfolio.profile';
 
@@ -10,6 +11,8 @@ export interface OpenOpts extends Scenario {
   colorScheme?: 'light' | 'dark';
   /** Storage mode preset before the app starts: 'none' = fresh visitor who has not chosen yet. Default 'browser'. */
   mode?: 'browser' | 'file' | 'none';
+  /** Overrides the served data files (path relative to data/ -> JSON). Default: derived from `pack`. */
+  files?: Record<string, unknown>;
   /** Runs before the app loads (e.g. to install browser API fakes). */
   beforeLoad?: (page: Page) => Promise<void>;
 }
@@ -22,8 +25,12 @@ export async function openApp(browser: Browser, o: OpenOpts): Promise<{ page: Pa
   });
   const page = await ctx.newPage();
   await page.clock.setFixedTime(new Date(FROZEN_NOW));
-  await page.route('**/data/market-pack.json', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(o.pack) }));
-  await page.route('**/data/cpi.json', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: '{"yoyPct":null,"label":""}' }));
+  // Serve the synthetic pack through the real file layout (market.json, history/, fundamentals/, analysis/, ...).
+  const files = o.files ?? packToFiles(o.pack as Record<string, unknown>);
+  await page.route('**/data/**', (r) => {
+    const rel = new URL(r.request().url()).pathname.replace(/^.*\/data\//, '');
+    return rel in files ? r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(files[rel]) }) : r.fulfill({ status: 404, body: '' });
+  });
   const mode = o.mode ?? 'browser';
   await page.addInitScript(([k, v, m, doSeed]) => {
     if (sessionStorage.getItem('seeded')) return;

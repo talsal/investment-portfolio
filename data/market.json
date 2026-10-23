@@ -1,0 +1,41 @@
+{
+  "schema": 1,
+  "generatedAt": "2026-10-23T11:59:00.664Z",
+  "groups": {
+    "fx": {
+      "state": "unavailable",
+      "asof": null,
+      "fetchedAt": null,
+      "source": "boi",
+      "note": "skipped:licence-not-acknowledged"
+    },
+    "quotes": {
+      "state": "unavailable",
+      "asof": null,
+      "fetchedAt": null,
+      "source": "none",
+      "note": "empty-universe"
+    },
+    "benchmark": {
+      "state": "unavailable",
+      "asof": null,
+      "fetchedAt": null,
+      "source": "none",
+      "note": "benchmark-not-refreshed"
+    },
+    "calendar": {
+      "state": "unavailable",
+      "asof": null,
+      "fetchedAt": null,
+      "source": "none",
+      "note": "skipped:not-configured"
+    },
+    "cpi": {
+      "state": "ok",
+      "asof": "2026-09-30",
+      "fetchedAt": "2026-10-23T11:59:00.664Z",
+      "source": "cbs"
+    }
+  },
+  "tickers": {}
+}
