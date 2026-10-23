@@ -16,7 +16,7 @@
     "engine:sanitize": "node scripts/sanitize-engine.mjs",
     "check:private": "node scripts/guard-personal-data.mjs",
     "prepare": "git config core.hooksPath .githooks",
-    "parity:private": "GOLDEN_PRIVATE=1 playwright test tests/e2e/parity.spec.ts --grep @private",
+    "parity:private": "GOLDEN_PRIVATE=1 playwright test tests/e2e --grep @private",
     "test:e2e": "playwright test tests/e2e",
     "test:all": "vitest run && playwright test"
   },

@@ -119,6 +119,8 @@ const profile = {
     { d: '2026-06-11', t: 'GAMA', s: 'B', q: '100', p: '48' },
     { d: '2026-08-03', t: 'QQQQ', s: 'B', q: '5', p: '10' },
   ],
+  // Ignored by the reference engine (which shows pack-flagged tickers); used by the new app's user-owned watchlist.
+  watchlist: ['ZETA'],
   cf: { income: '18000', extra: '5000', target: '6', rent: '5500', food: '2500', out: '1200', car: '1800', bills: '1500', kids: '', health: '300', other: '700' },
   updatedAt: 0,
 };

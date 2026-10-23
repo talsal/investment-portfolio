@@ -8,6 +8,10 @@ export interface OpenOpts extends Scenario {
   /** When false the profile is not seeded (fresh visitor). */
   seed?: boolean;
   colorScheme?: 'light' | 'dark';
+  /** Storage mode preset before the app starts: 'none' = fresh visitor who has not chosen yet. Default 'browser'. */
+  mode?: 'browser' | 'file' | 'none';
+  /** Runs before the app loads (e.g. to install browser API fakes). */
+  beforeLoad?: (page: Page) => Promise<void>;
 }
 
 /** Opens the built app with a stubbed market pack, a frozen clock and (optionally) a seeded profile. */
@@ -20,7 +24,14 @@ export async function openApp(browser: Browser, o: OpenOpts): Promise<{ page: Pa
   await page.clock.setFixedTime(new Date(FROZEN_NOW));
   await page.route('**/data/market-pack.json', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(o.pack) }));
   await page.route('**/data/cpi.json', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: '{"yoyPct":null,"label":""}' }));
-  if (o.seed !== false) await page.addInitScript(([k, v]) => { if (!sessionStorage.getItem('seeded')) { localStorage.setItem(k as string, v as string); sessionStorage.setItem('seeded', '1'); } }, [PROFILE_KEY, JSON.stringify(o.profile)]);
+  const mode = o.mode ?? 'browser';
+  await page.addInitScript(([k, v, m, doSeed]) => {
+    if (sessionStorage.getItem('seeded')) return;
+    sessionStorage.setItem('seeded', '1');
+    if (m !== 'none') localStorage.setItem('portfolio.mode', m as string);
+    if (doSeed === '1') localStorage.setItem(k as string, v as string);
+  }, [PROFILE_KEY, typeof o.profile === 'string' ? o.profile : JSON.stringify(o.profile), mode, o.seed !== false && mode === 'browser' ? '1' : '0']);
+  await o.beforeLoad?.(page);
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(String(e)));
   page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });

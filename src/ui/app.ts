@@ -3,7 +3,9 @@ import type { MarketData, Profile } from '../calc/types';
 import { loadExampleBundle, loadMarket } from '../data/loader';
 import { he } from '../i18n/he';
 import { blankProfile, sanitizeProfile } from '../profile/schema';
-import { loadProfile, loadTheme, saveProfile, saveTheme, type Theme } from '../storage/browserStore';
+import { browserDeps } from '../storage/browserDeps';
+import { StorageController } from '../storage/controller';
+import { loadTheme, saveTheme, type Theme } from '../storage/browserStore';
 import { $, show } from './dom';
 import { buildEditor, setMsg, syncTopFields, wireEditor } from './editor';
 import type { Ctx } from './context';
@@ -13,39 +15,43 @@ import { renderAnalysis } from './sections/criteria';
 import { bindHistoryModes, renderHistory } from './sections/historyChart';
 import { renderPie } from './sections/pie';
 import { renderBenchmark, renderDividends, renderEquity, renderAnnual, renderEvents, renderProfitTotal, renderTotals } from './sections/summary';
+import { renderWithdrawal, syncWithdrawalInputs } from './sections/withdrawal';
+import { wireStorageUi } from './storageUi';
 
-const SAVE_DEBOUNCE_MS = 600;
+type View = 'chooser' | 'gate' | 'workspace';
 
 export async function startApp(root: HTMLElement): Promise<void> {
   buildShell(root);
   applyTheme(loadTheme());
-  let P: Profile = loadProfile();
+  const ctrl = new StorageController(browserDeps());
+  let P: Profile = blankProfile();
   let liveMarket: MarketData = { tickers: {} };
   let exampleMarket: MarketData | null = null;
   const market = (): MarketData => (P.settings.example && exampleMarket ? exampleMarket : liveMarket);
+  const setStatus = (t: string) => { $('inStatus').textContent = t; };
 
-  let saveTimer: ReturnType<typeof setTimeout> | undefined;
-  const status = $('inStatus');
-  function scheduleSave() {
-    clearTimeout(saveTimer);
-    status.textContent = he.editor.saving;
-    saveTimer = setTimeout(() => {
-      P.updatedAt = Date.now();
-      status.textContent = saveProfile(P) ? he.editor.saved : he.editor.saveFailed;
-    }, SAVE_DEBOUNCE_MS);
+  let firstView = true;
+  function showView(v: View) {
+    show('modeChooser', v === 'chooser');
+    show('fileGate', v === 'gate');
+    show('workspace', v === 'workspace');
+    // Keyboard and screen-reader users: move focus to the new view's heading (not on first paint).
+    if (!firstView) {
+      const target = v === 'chooser' ? $('chooserH') : v === 'gate' ? $('gateH') : document.querySelector<HTMLElement>('h1');
+      if (target) { target.tabIndex = -1; target.focus({ preventScroll: false }); }
+    }
+    firstView = false;
   }
 
   function render() {
     const M = market();
     const C = compute(P, M);
     const ctx: Ctx = { P, M, C, now: new Date() };
-    $('subtitle').textContent = C.total > 0
-      ? he.app.subtitle(C.fx.toFixed(4), C.fxManual, M.asof || '')
-      : he.app.subtitleEmpty;
+    $('subtitle').textContent = C.total > 0 ? he.app.subtitle(C.fx.toFixed(4), C.fxManual, M.asof || '') : he.app.subtitleEmpty;
     show('outEmpty', !(C.total > 0));
     show('outMain', C.total > 0);
     if (C.total > 0) {
-      renderTotals(ctx); renderProfitTotal(ctx); renderPie(ctx); renderEquity(ctx); renderAnnual(ctx);
+      renderTotals(ctx); renderProfitTotal(ctx); renderPie(ctx); renderEquity(ctx); renderAnnual(ctx); renderWithdrawal(ctx);
     }
     let any = renderAnalysis(ctx);
     renderDividends(ctx); renderBenchmark(ctx); renderEvents(ctx);
@@ -55,12 +61,36 @@ export async function startApp(root: HTMLElement): Promise<void> {
     $('demoNotice').hidden = !M.demo;
   }
 
-  function rebuild() { buildEditor(P); buildCashFlowInputs(P); }
+  function rebuild() { buildEditor(P); buildCashFlowInputs(P); syncWithdrawalInputs(P); syncTopFields(P); }
 
-  wireEditor(() => P, {
-    onEdit: () => { scheduleSave(); render(); },
-    onStructure: () => { buildEditor(P); scheduleSave(); render(); },
+  ctrl.onPersistChange = () => ui.refresh();
+  const ui = wireStorageUi(ctrl, {
+    getProfile: () => P,
+    applyProfile(next, markChanged) {
+      P = next;
+      rebuild();
+      if (P.settings.example && !exampleMarket) void loadExampleBundle().then((b) => { exampleMarket = b.market; render(); });
+      if (markChanged) afterEdit(); else { render(); ui.refresh(); }
+    },
+    showState: showView,
+    setStatus,
+    blank: blankProfile,
   });
+
+  /** Every change to the profile goes through here: persist according to the storage mode, then re-render. */
+  function afterEdit() {
+    if (ctrl.mode === 'browser') {
+      setStatus(he.editor.saving);
+      ctrl.noteEdit(() => P, (ok) => { setStatus(ok ? he.editor.saved : he.editor.saveFailed); ui.refresh(); });
+    } else if (ctrl.mode === 'file') {
+      ctrl.noteEdit(() => P, () => {});
+      setStatus(he.storage.status.fileDirty);
+    }
+    render();
+    ui.refresh();
+  }
+
+  wireEditor(() => P, { onEdit: afterEdit, onStructure: () => { buildEditor(P); afterEdit(); } });
   bindHistoryModes(render);
 
   $('toggleTable').addEventListener('click', function (this: HTMLElement) {
@@ -75,19 +105,21 @@ export async function startApp(root: HTMLElement): Promise<void> {
     const k = el.dataset.cf;
     if (!k) return;
     (P.cf as unknown as Record<string, string>)[k] = el.value;
-    scheduleSave(); render();
+    afterEdit();
   });
-  $('cfClear').addEventListener('click', () => {
-    P.cf = blankProfile().cf;
-    buildCashFlowInputs(P); scheduleSave(); render();
-  });
+  $('cfClear').addEventListener('click', () => { P.cf = blankProfile().cf; buildCashFlowInputs(P); afterEdit(); });
+  document.querySelectorAll<HTMLInputElement>('[data-wd]').forEach((el) => el.addEventListener('input', () => {
+    P.withdrawal[el.dataset.wd as 'years' | 'realRate'] = el.value;
+    afterEdit();
+  }));
 
   $('btnExample').addEventListener('click', async () => {
     const ex = await loadExampleBundle();
     exampleMarket = ex.market;
     P = sanitizeProfile(ex.profile);
     P.settings.example = true;
-    rebuild(); scheduleSave(); render();
+    rebuild();
+    afterEdit();
     setMsg(he.editor.exampleLoaded);
   });
   let armed = false;
@@ -101,7 +133,8 @@ export async function startApp(root: HTMLElement): Promise<void> {
     armed = false;
     this.textContent = he.editor.clearAll;
     P = blankProfile();
-    rebuild(); scheduleSave(); render();
+    rebuild();
+    afterEdit();
     setMsg(he.editor.cleared);
   });
 
@@ -115,7 +148,11 @@ export async function startApp(root: HTMLElement): Promise<void> {
   });
 
   rebuild();
-  syncTopFields(P);
+  const init = await ctrl.init();
+  if (init.state === 'ready') { P = init.profile; rebuild(); showView('workspace'); }
+  else if (init.state === 'fileGate') ui.showGate(init.remembered);
+  else showView('chooser');
+  ui.refresh();
   render();
   const loaded = await loadMarket();
   liveMarket = loaded.M;

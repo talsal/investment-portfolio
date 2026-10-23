@@ -26,6 +26,15 @@ function applyKnownChanges(s: Snapshot): Snapshot {
   return stripIsolates(JSON.parse(text));
 }
 
+/**
+ * Known behavioural difference: the reference shows tickers flagged `watch` in the pack; the new app shows the
+ * user's own watchlist. Scenarios whose profile has no watchlist therefore waive the watchlist section.
+ */
+const WAIVE_WATCHLIST = new Map<string, { hidden: boolean }>([
+  ['empty-profile', { hidden: true }], // no watchlist entries -> section hidden
+  ['fake-empty-pack', { hidden: false }], // watchlisted ticker without analysis -> section shown with a "no analysis" note
+]);
+
 const scenarios: Record<string, () => Scenario> = {
   'fake-full': () => ({ profile: fx('profile-fake'), pack: fx('pack-fake'), hsUsd: true }),
   'fake-fx-override': () => ({ profile: fx('profile-fx-override'), pack: fx('pack-fake') }),
@@ -38,6 +47,10 @@ for (const [name, make] of Object.entries(scenarios)) {
   test(`parity with reference engine: ${name}`, async ({ browser }) => {
     const actual = stripIsolates(await runApp(browser, make()));
     const expected = applyKnownChanges(golden(name));
+    if (WAIVE_WATCHLIST.has(name)) {
+      expect(actual.sections.wlSection?.hidden).toBe((WAIVE_WATCHLIST.get(name) as { hidden: boolean }).hidden);
+      delete actual.sections.wlSection; delete expected.sections.wlSection;
+    }
     // Compare section by section so a failure points at the section.
     for (const id of Object.keys(expected.sections)) expect(actual.sections[id], id).toEqual(expected.sections[id]);
     expect(actual).toEqual(expected);
@@ -49,7 +62,11 @@ for (const [name, make] of Object.entries(scenarios)) {
 test('@private parity on real profile and pack', async ({ browser }) => {
   test.skip(!process.env.GOLDEN_PRIVATE, 'set GOLDEN_PRIVATE=1 to run');
   const raw = JSON.parse(readFileSync('sample-data/profile_example_PRIVATE.json', 'utf8'));
-  const sc: Scenario = { profile: raw.profile ?? raw, pack: JSON.parse(readFileSync('sample-data/market_pack_example.json', 'utf8')), hsUsd: true };
+  const pack = JSON.parse(readFileSync('sample-data/market_pack_example.json', 'utf8'));
+  const base = raw.profile ?? raw;
+  // The reference engine shows pack-flagged tickers; give the new app the equivalent user watchlist.
+  const watchlist = Object.keys(pack.tickers).filter((t) => pack.tickers[t].watch);
+  const sc: Scenario = { profile: { ...base, watchlist }, pack, hsUsd: true };
   const { runReference } = await import('../golden/harness');
   const expected = applyKnownChanges(await runReference(browser, sc));
   const actual = stripIsolates(await runApp(browser, sc));

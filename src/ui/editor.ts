@@ -1,4 +1,5 @@
 import type { Profile } from '../calc/types';
+import { RULES } from '../config/rules';
 import { he } from '../i18n/he';
 import { TICKER_NAMES } from '../i18n/tickerNames';
 import { $ } from './dom';
@@ -46,6 +47,7 @@ export function buildEditor(P: Profile): void {
     select(F.action, attr('trades', i, 's'), [['B', E.side.B], ['S', E.side.S]], r.s),
     field('n', F.qty, attr('trades', i, 'q'), r.q), field('n', F.priceUsd, attr('trades', i, 'p'), r.p), delBtn('trades', i),
   ] as Part[]}</div>`)}`);
+  setHtml($('inWatch'), html`${P.watchlist.map((t, i) => html`<span class="chip">${t}<button type="button" data-del="watchlist" data-i="${i}" aria-label="${he.watchlistEditor.remove(t)}">×</button></span>`)}`);
   syncTopFields(P);
 }
 
@@ -118,11 +120,22 @@ export function wireEditor(P: () => Profile, hooks: EditorHooks): void {
     if (row2) { row2[f as string] = t.value; hooks.onEdit(); }
   });
   card.addEventListener('click', (e) => {
-    const d = (e.target as HTMLElement).dataset?.del as G | undefined;
+    const d = (e.target as HTMLElement).dataset?.del as G | 'watchlist' | undefined;
     if (!d) return;
     (P()[d] as unknown[]).splice(Number((e.target as HTMLElement).dataset.i), 1);
     hooks.onStructure();
   });
+  const addWatch = () => {
+    const input = $<HTMLInputElement>('watchNew');
+    const t = input.value.trim().toUpperCase().replace(/\s+/g, '');
+    input.value = '';
+    const list = P().watchlist;
+    if (!t || list.includes(t) || list.length >= RULES.limits.watchlist) return;
+    list.push(t);
+    hooks.onStructure();
+  };
+  $('addWatch').addEventListener('click', addWatch);
+  $('watchNew').addEventListener('keydown', (e) => { if ((e as KeyboardEvent).key === 'Enter') { e.preventDefault(); addWatch(); } });
   const add = (id: string, fn: () => void) => $(id).addEventListener('click', () => { fn(); hooks.onStructure(); });
   add('addRow', () => P().rows.push({ n: '', t: '', c: 'USD', ty: 'eq', q: '', k: '', p: '' }));
   add('addGemel', () => P().gemel.push({ n: '', b: '', d: '', e: '', r: '' }));

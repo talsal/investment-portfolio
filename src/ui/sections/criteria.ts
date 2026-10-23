@@ -87,10 +87,16 @@ export function renderAnalysis(ctx: Ctx): boolean {
   pend.hidden = !pending.length;
   if (pending.length) pend.textContent = he.analysis.pending(pending.join(', '));
 
-  // Watchlist: tickers flagged `watch` in the data and not held.
+  // Watchlist: the user's own list, minus anything already held. Tickers without analysis are listed as such.
   const heldT = new Set(C.held.map((h) => h.T));
-  const wl = Object.keys(M.tickers).filter((t) => M.tickers[t]?.watch && M.tickers[t]?.bf && !heldT.has(t));
-  show('wlSection', wl.length > 0);
+  const mine = ctx.P.watchlist.filter((t) => !heldT.has(t));
+  const wl = mine.filter((t) => M.tickers[t]?.bf);
+  const noAnalysis = mine.filter((t) => !M.tickers[t]?.bf);
+  show('wlSection', mine.length > 0);
+  const wlPend = $('wlPending');
+  wlPend.hidden = !noAnalysis.length;
+  if (noAnalysis.length) wlPend.textContent = he.watch.noAnalysis(noAnalysis.join(', '));
+  if (!wl.length) { setHtml($('wlTable'), ''); $('wlNote').textContent = ''; }
   if (wl.length) {
     hasAny = true;
     const W = he.watch;

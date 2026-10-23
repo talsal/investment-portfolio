@@ -15,10 +15,8 @@ test.describe('first run', () => {
     await expect(page.locator('#outMain')).toBeHidden();
     const filled = await page.$$eval('#inCard input, #inCard select', (els) => els.filter((e) => (e as HTMLInputElement).value && (e as HTMLInputElement).type !== 'date').length);
     expect(filled).toBe(0);
-    // Holdings-based sections stay hidden. The watchlist is data-driven (tickers flagged `watch` in the pack), so, as in
-    // the reference engine, it is shown even for an empty profile: an open product question, kept for parity.
-    for (const id of ['bfSection', 'hsSection', 'bmSection', 'divSection', 'evSection']) await expect(page.locator(`#${id}`)).toBeHidden();
-    await expect(page.locator('#wlSection')).toBeVisible();
+    // Holdings-based sections and the (user-owned) watchlist stay hidden until the user adds something.
+    for (const id of ['bfSection', 'wlSection', 'hsSection', 'bmSection', 'divSection', 'evSection']) await expect(page.locator(`#${id}`)).toBeHidden();
     expect(errors).toEqual([]);
     await close();
   });
@@ -70,7 +68,8 @@ test.describe('data entry and persistence', () => {
     await page.locator('[data-i="1"][data-f="t"]').fill('1215771');
     await page.locator('[data-i="1"][data-f="t"]').blur();
     await expect(page.locator('[data-i="1"][data-f="c"]')).toHaveValue('ILS');
-    await expect(page.locator('[data-i="1"][data-f="n"]')).not.toHaveValue('');
+    await expect(page.locator('[data-i="1"][data-f="n"]')).toHaveValue(''); // no built-in names for security numbers
+    await expect(page.locator('#inMsg')).toContainText('מספר הנייר 1215771');
     await close();
   });
 

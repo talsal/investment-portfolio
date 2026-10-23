@@ -19,7 +19,9 @@ export interface Rules {
   annualization: { minHoldingDays: number; daysPerYear: number; method: 'linear' };
   dividends: { netTaxApprox: number; defaultPaymentsPerYear: number };
   cashflow: { cushionMonthsOptions: number[]; defaultCushionMonths: number };
-  limits: { rows: number; funds: number; trades: number };
+  limits: { rows: number; funds: number; trades: number; watchlist: number };
+  withdrawal: { timing: 'end-of-month'; maxYears: number };
+  backup: { nudgeDays: number; snoozeDays: number; maxFileBytes: number };
   currency: { agorotFactor: number };
 }
 

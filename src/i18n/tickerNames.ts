@@ -1,8 +1,6 @@
 // Hebrew display names for common tickers and Israeli security numbers.
 // Generated from the reference engine by scripts/extract-reference-strings.mjs.
 export const TICKER_NAMES: Readonly<Record<string, string>> = {
-  "1197698": "תכלית סל (40) ת\"א-ביטוח",
-  "1215771": "אי.בי.אי. סל (4A) ת\"א-ביטוח",
   "AAPL": "אפל",
   "MSFT": "מיקרוסופט",
   "GOOGL": "אלפבית (גוגל)",

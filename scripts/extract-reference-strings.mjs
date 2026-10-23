@@ -7,7 +7,8 @@ const src = readFileSync('reference/template_generic_engine_with_demo_pack.html'
 const m = /var TICKER_NAMES = (\{[\s\S]*?\n  \});/.exec(src);
 if (!m) throw new Error('TICKER_NAMES not found');
 const names = new Function(`return ${m[1]}`)();
-const sorted = Object.fromEntries(Object.entries(names));
+// Israeli security numbers are deliberately not shipped in the dictionary: they can identify a specific holding.
+const sorted = Object.fromEntries(Object.entries(names).filter(([k]) => !/^\d+$/.test(k)));
 writeFileSync(
   'src/i18n/tickerNames.ts',
   `// Hebrew display names for common tickers and Israeli security numbers.\n// Generated from the reference engine by scripts/extract-reference-strings.mjs.\nexport const TICKER_NAMES: Readonly<Record<string, string>> = ${JSON.stringify(sorted, null, 2)};\n`,

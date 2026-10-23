@@ -23,7 +23,12 @@ export interface Settings {
 export interface Profile {
   fx: string; cashUsd: string; cashNis: string; mmf: string; tradeRate: string; eqTarget: string;
   rows: HoldingRow[]; gemel: FundRow[]; hish: FundRow[]; trades: TradeRow[];
-  cf: CashFlowInput; settings: Settings; updatedAt: number;
+  cf: CashFlowInput; settings: Settings;
+  /** Tickers the user follows without holding them. */
+  watchlist: string[];
+  /** Inputs for the sustainable-withdrawal estimate (strings as typed). */
+  withdrawal: { years: string; realRate: string };
+  updatedAt: number;
 }
 
 export interface BfInputs {

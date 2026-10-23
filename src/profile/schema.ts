@@ -14,7 +14,8 @@ export function blankCashFlow(): CashFlowInput {
 export function blankProfile(): Profile {
   return {
     fx: '', cashUsd: '', cashNis: '', mmf: '', tradeRate: '', eqTarget: '',
-    rows: [], gemel: [], hish: [], trades: [], cf: blankCashFlow(), settings: { benchmarkDate: '', example: false }, updatedAt: 0,
+    rows: [], gemel: [], hish: [], trades: [], cf: blankCashFlow(), settings: { benchmarkDate: '', example: false },
+    watchlist: [], withdrawal: { years: '', realRate: '' }, updatedAt: 0,
   };
 }
 
@@ -64,6 +65,15 @@ export function sanitizeProfile(o: unknown): Profile {
     P.settings.benchmarkDate = o.settings.benchmarkDate;
   }
   if (isObj(o.settings) && o.settings.example === true) P.settings.example = true;
+  const seen = new Set<string>();
+  for (const w of arr(o.watchlist, L.watchlist)) {
+    const t = txt(w, 12).trim().toUpperCase().replace(/\s+/g, '');
+    if (t && !seen.has(t)) { seen.add(t); P.watchlist.push(t); }
+  }
+  if (isObj(o.withdrawal)) {
+    P.withdrawal.years = numStr(o.withdrawal.years, 0, RULES.withdrawal.maxYears);
+    P.withdrawal.realRate = numStr(o.withdrawal.realRate, -50, 100);
+  }
   if (typeof o.updatedAt === 'number' && isFinite(o.updatedAt)) P.updatedAt = o.updatedAt;
   return P;
 }
