@@ -4,8 +4,13 @@ import { RULES } from '../config/rules';
 import { html, rich, setHtml, type Part, type Raw } from './html';
 
 const disclaimer = (): Raw => html`<p class="disclaimer" data-parity-skip>${he.app.disclaimer}</p>`;
-const section = (id: string, title: string, body: Part, opts: { hidden?: boolean; note?: Part; skip?: boolean } = {}): Raw =>
-  html`<div class="compare-section" id="${id}" ${opts.hidden ? 'hidden' : ''} ${opts.skip ? 'data-parity-skip' : ''}><h2>${title}</h2>${opts.note ? html`<p class="compare-note">${opts.note}</p>` : ''}${body}${disclaimer()}</div>`;
+const section = (id: string, title: string, body: Part, opts: { hidden?: boolean; note?: Part; skip?: boolean; collapsible?: boolean } = {}): Raw => {
+  const inner = html`${opts.note ? html`<p class="compare-note">${opts.note}</p>` : ''}${body}${disclaimer()}`;
+  // Collapsible sections use <details>, like the freshness card: a native arrow, keyboard and screen-reader support.
+  return opts.collapsible
+    ? html`<details class="compare-section collapsible" id="${id}" open ${opts.hidden ? 'hidden' : ''} ${opts.skip ? 'data-parity-skip' : ''}><summary><h2>${title}</h2></summary>${inner}</details>`
+    : html`<div class="compare-section" id="${id}" ${opts.hidden ? 'hidden' : ''} ${opts.skip ? 'data-parity-skip' : ''}><h2>${title}</h2>${inner}</div>`;
+};
 
 function editorCard(): Raw {
   const E = he.editor;
@@ -114,7 +119,7 @@ export function buildShell(root: HTMLElement): void {
   const T = he;
   setHtml(root, html`
     <a class="skip" href="#results">${T.app.skip}</a>
-    <div class="top-bar"><button type="button" class="toggle-btn" id="btnTheme" aria-live="polite"></button></div>
+    <div class="top-bar"><button type="button" class="toggle-btn" id="btnFont" aria-live="polite"></button><button type="button" class="toggle-btn" id="btnTheme" aria-live="polite"></button></div>
     <h1>${T.app.title}</h1>
     <p class="subtitle" id="subtitle">${T.app.subtitleEmpty}</p>
     ${chooser()}
@@ -155,7 +160,7 @@ export function buildShell(root: HTMLElement): void {
     <div class="ana-pending" id="anaPending" hidden></div>
     ${section('bfSection', T.criteria.h, html`<div class="bf-wrap" id="bfTable"></div><h3 class="sub-h">${T.criteria.baseH}</h3><div class="bf-wrap" id="bfBase"></div><p class="rate-note" id="bfNote"></p>`, { hidden: true, note: rich(T.criteria.note({ pe: RULES.criteria.pe.maxForward, fcf: RULES.criteria.fcf.minYieldPct })) })}
     ${section('wlSection', T.watch.h, html`<div class="bf-wrap" id="wlTable"></div><p class="ana-pending" id="wlPending" hidden></p><p class="rate-note" id="wlNote"></p>`, { hidden: true, note: T.watch.note })}
-    ${section('divSection', T.dividends.h, html`<div id="divTable"></div><p class="rate-note" id="divNote"></p>`, { hidden: true, note: T.dividends.note })}
+    ${section('divSection', T.dividends.h, html`<div class="bf-wrap" id="divTable"></div><p class="rate-note" id="divNote"></p>`, { hidden: true, note: T.dividends.note })}
     ${section('bmSection', T.benchmark.h, html`
       <p class="in-msg bad" id="bmError" role="alert" hidden></p>
       <p class="compare-total">${T.benchmark.totalLead[0]}<span id="bmBasket"></span>${T.benchmark.totalLead[1]}<span id="bmSpy"></span>${T.benchmark.totalLead[2]}<span id="bmDiff"></span></p>
@@ -174,7 +179,7 @@ export function buildShell(root: HTMLElement): void {
       <div class="cf-grid" id="cfInputs"></div><div class="cf-tiles" id="cfTiles"></div>
       <h3 class="cf-sub">${T.cashflow.barsH}</h3><div class="cf-bars" id="cfBars"></div>
       <div class="cf-link" id="cfLink"></div><p class="rate-note" id="cfNote"></p>
-      <button type="button" class="toggle-btn mt8" id="cfClear">${T.cashflow.clear}</button>`, { note: T.cashflow.note })}
+      <button type="button" class="toggle-btn mt8" id="cfClear">${T.cashflow.clear}</button>`, { note: T.cashflow.note, collapsible: true })}
     <div class="compare-section" id="glossarySection">
       <h2>${T.glossary.h}</h2>
       <dl class="glossary">${GLOSSARY.map(([term, def]) => html`<dt>${term}</dt><dd>${def}</dd>`)}</dl>

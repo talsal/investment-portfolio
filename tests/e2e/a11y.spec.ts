@@ -89,3 +89,37 @@ test.describe('keyboard and structure', () => {
     await close();
   });
 });
+
+test.describe('text size', () => {
+  test('defaults to larger text than the prototype, and the button cycles and remembers the choice', async ({ browser }) => {
+    const { page, close } = await openApp(browser, { profile, pack });
+    const size = () => page.locator('.rate-note').first().evaluate((el) => parseFloat(getComputedStyle(el).fontSize));
+    const normal = await size();
+    expect(normal).toBeGreaterThanOrEqual(13); // was 11.5px
+    expect(await page.locator('td').first().evaluate((el) => parseFloat(getComputedStyle(el).fontSize))).toBeGreaterThanOrEqual(15); // was 13px
+    await page.click('#btnFont');
+    await expect(page.locator('html')).toHaveAttribute('data-fs', 'large');
+    expect(await size()).toBeGreaterThan(normal * 1.1);
+    await page.click('#btnFont');
+    await expect(page.locator('html')).toHaveAttribute('data-fs', 'xlarge');
+    await page.reload();
+    await expect(page.locator('html')).toHaveAttribute('data-fs', 'xlarge');
+    await page.click('#btnFont');
+    await expect(page.locator('html')).not.toHaveAttribute('data-fs', /.+/);
+    await close();
+  });
+  test('no horizontal page scroll at 360px even with the largest text', async ({ browser }) => {
+    const { page, close } = await openApp(browser, { profile, pack, viewport: { width: 360, height: 800 } });
+    await page.click('#btnFont'); await page.click('#btnFont');
+    const w = await page.evaluate(() => ({ sw: document.documentElement.scrollWidth, iw: window.innerWidth }));
+    expect(w.sw).toBeLessThanOrEqual(w.iw);
+    await close();
+  });
+  test('axe still passes with the largest text', async ({ browser }) => {
+    const { page, close } = await openApp(browser, { profile, pack });
+    await page.click('#btnFont'); await page.click('#btnFont');
+    await openAll(page);
+    await audit(page, 'xlarge text');
+    await close();
+  });
+});

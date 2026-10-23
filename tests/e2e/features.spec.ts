@@ -68,3 +68,21 @@ test.describe('sustainable withdrawal', () => {
     await close();
   });
 });
+
+test.describe('collapsible income and expenses', () => {
+  test('opens by default, closes and reopens from its heading, with an arrow like the other cards', async ({ browser }) => {
+    const { page, close } = await openApp(browser, { profile: {}, pack, seed: false });
+    const sec = page.locator('#cfSection');
+    await expect(sec).toHaveJSProperty('open', true);
+    await expect(page.locator('#cfInputs')).toBeVisible();
+    await page.locator('#cfSection > summary').click();
+    await expect(sec).toHaveJSProperty('open', false);
+    await expect(page.locator('#cfInputs')).toBeHidden();
+    await expect(page.locator('#cfSection > summary')).toBeVisible();
+    await page.locator('#cfSection > summary').focus();
+    await page.keyboard.press('Enter');
+    await expect(page.locator('#cfInputs')).toBeVisible();
+    expect(await page.locator('#cfSection > summary').evaluate((el) => getComputedStyle(el).display)).toBe('list-item'); // native arrow marker
+    await close();
+  });
+});

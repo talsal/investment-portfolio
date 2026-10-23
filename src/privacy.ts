@@ -2,6 +2,9 @@ import './ui/styles.css';
 import { he } from './i18n/he';
 import { loadTheme } from './storage/browserStore';
 import { html, setHtml } from './ui/html';
+import { applyFontScale, loadFontScale } from './ui/prefs';
+
+applyFontScale(loadFontScale());
 
 const t = loadTheme();
 if (t !== 'auto') document.documentElement.setAttribute('data-theme', t);

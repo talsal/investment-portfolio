@@ -18,6 +18,7 @@ import { renderPie } from './sections/pie';
 import { renderBenchmark, renderDividends, renderEquity, renderAnnual, renderEvents, renderProfitTotal, renderTotals } from './sections/summary';
 import { renderFreshness } from './sections/freshnessPanel';
 import { renderWithdrawal, syncWithdrawalInputs } from './sections/withdrawal';
+import { applyFontScale, loadFontScale, saveFontScale, type FontScale } from './prefs';
 import { wireStorageUi } from './storageUi';
 
 type View = 'chooser' | 'gate' | 'workspace';
@@ -25,6 +26,8 @@ type View = 'chooser' | 'gate' | 'workspace';
 export async function startApp(root: HTMLElement): Promise<void> {
   buildShell(root);
   applyTheme(loadTheme());
+  let fontScale: FontScale = loadFontScale();
+  applyFontScale(fontScale);
   const ctrl = new StorageController(browserDeps());
   let P: Profile = blankProfile();
   // Reviewer preview: ?drafts=1 also loads machine drafts (clearly labelled). Visitors never see them otherwise.
@@ -84,8 +87,10 @@ export async function startApp(root: HTMLElement): Promise<void> {
       if (scrolls && !el.hidden) {
         el.tabIndex = 0;
         el.setAttribute('role', 'region');
-        const title = el.closest('.compare-section')?.querySelector('h2')?.textContent;
-        if (title) el.setAttribute('aria-label', title);
+        const sec = el.closest('.compare-section');
+        const title = sec?.querySelector('h2')?.textContent;
+        const nth = sec ? [...sec.querySelectorAll<HTMLElement>('.bf-wrap')].indexOf(el) : 0;
+        if (title) el.setAttribute('aria-label', nth > 0 ? `${title} (${nth + 1})` : title); // landmark names must be unique
       } else { el.removeAttribute('tabindex'); el.removeAttribute('role'); el.removeAttribute('aria-label'); }
     });
   }
@@ -176,6 +181,15 @@ export async function startApp(root: HTMLElement): Promise<void> {
   themeBtn.addEventListener('click', () => {
     theme = theme === 'auto' ? 'light' : theme === 'light' ? 'dark' : 'auto';
     saveTheme(theme); applyTheme(theme); paintTheme();
+  });
+
+  const fontBtn = $('btnFont');
+  const paintFont = () => { fontBtn.textContent = he.app.fontSize[fontScale]; };
+  paintFont();
+  fontBtn.addEventListener('click', () => {
+    fontScale = fontScale === 'normal' ? 'large' : fontScale === 'large' ? 'xlarge' : 'normal';
+    saveFontScale(fontScale); applyFontScale(fontScale); paintFont();
+    markScrollRegions();
   });
 
   rebuild();
