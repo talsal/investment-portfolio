@@ -15,24 +15,24 @@ function editorCard(): Raw {
     <summary>${E.summary}</summary>
     <p class="in-hint mt8">${E.hint}</p>
     <div class="in-grid w420">${top('fx', E.fxLabel('3.11'), '3.11')}</div>
-    <h3>${E.tradeH}</h3><p class="in-hint">${E.tradeHint}</p>
+    <h2 class="card-h">${E.tradeH}</h2><p class="in-hint">${E.tradeHint}</p>
     <div id="inRows"></div><div class="in-btns"><button type="button" class="toggle-btn" id="addRow">${E.addRow}</button></div>
-    <h3>${E.cashH}</h3>
+    <h2 class="card-h">${E.cashH}</h2>
     <div class="in-grid">${top('cashUsd', E.cashUsd)}${top('cashNis', E.cashNis)}${top('mmf', E.mmf)}${top('tradeRate', E.tradeRate)}</div>
-    <h3>${E.gemelH}</h3><p class="in-hint">${E.gemelHint}</p>
+    <h2 class="card-h">${E.gemelH}</h2><p class="in-hint">${E.gemelHint}</p>
     <div id="inGemel"></div><div class="in-btns"><button type="button" class="toggle-btn" id="addGemel">${E.addGemel}</button></div>
-    <h3>${E.hishH}</h3>
+    <h2 class="card-h">${E.hishH}</h2>
     <div id="inHish"></div><div class="in-btns"><button type="button" class="toggle-btn" id="addHish">${E.addHish}</button></div>
-    <h3>${E.targetH}</h3>
+    <h2 class="card-h">${E.targetH}</h2>
     <div class="in-grid w420">${top('eqTarget', E.eqTarget, E.eqTargetPh)}</div>
-    <h3>${he.watchlistEditor.h}</h3><p class="in-hint">${he.watchlistEditor.hint}</p>
+    <h2 class="card-h">${he.watchlistEditor.h}</h2><p class="in-hint">${he.watchlistEditor.hint}</p>
     <div id="inWatch" class="chips"></div>
     <div class="in-btns"><label class="in-f grow">${he.watchlistEditor.label}<input type="text" dir="ltr" autocomplete="off" id="watchNew" maxlength="12"></label><button type="button" class="toggle-btn" id="addWatch">${he.watchlistEditor.add}</button></div>
-    <h3>${E.tradesH}</h3><p class="in-hint">${E.tradesHint}</p>
+    <h2 class="card-h">${E.tradesH}</h2><p class="in-hint">${E.tradesHint}</p>
     <div id="inTrades"></div><div class="in-btns"><button type="button" class="toggle-btn" id="addTrade">${E.addTrade}</button></div>
-    <h3>${E.settingsH}</h3>
+    <h2 class="card-h">${E.settingsH}</h2>
     <div class="in-grid w420"><label class="in-f">${E.benchmarkDate}<input class="n" type="date" data-setting="benchmarkDate"></label></div>
-    <h3>${E.exampleH}</h3><p class="in-hint">${E.exampleHint}</p>
+    <h2 class="card-h">${E.exampleH}</h2><p class="in-hint">${E.exampleHint}</p>
     <div class="in-btns">
       <button type="button" class="toggle-btn" id="btnExample">${E.loadExample}</button>
       <button type="button" class="toggle-btn" id="btnClear">${E.clearAll}</button>
@@ -48,8 +48,8 @@ function chooser(): Raw {
   return html`<section id="modeChooser" class="in-card chooser" hidden aria-labelledby="chooserH">
     <h2 id="chooserH">${C.h}</h2><p class="in-hint">${C.intro}</p>
     <div class="choices">
-      <div class="choice"><h3>${C.browserH}</h3><p>${C.browserP}</p><button type="button" class="toggle-btn" id="chooseBrowser">${C.browserBtn}</button></div>
-      <div class="choice"><h3>${C.fileH}</h3><p>${C.fileP}</p><button type="button" class="toggle-btn" id="chooseFile">${C.fileBtn}</button></div>
+      <div class="choice"><h2 class="card-h">${C.browserH}</h2><p>${C.browserP}</p><button type="button" class="toggle-btn" id="chooseBrowser">${C.browserBtn}</button></div>
+      <div class="choice"><h2 class="card-h">${C.fileH}</h2><p>${C.fileP}</p><button type="button" class="toggle-btn" id="chooseFile">${C.fileBtn}</button></div>
     </div>
   </section>`;
 }
@@ -96,15 +96,15 @@ function storageCard(): Raw {
     </div>
     <div class="drop" id="stDrop" tabindex="0">${K.dropHint}</div>
     <div class="switch-panel" id="switchPanel" role="alertdialog" aria-labelledby="swH" hidden>
-      <h3 id="swH"></h3><p id="swP"></p>
+      <h2 class="card-h" id="swH"></h2><p id="swP"></p>
       <div class="in-btns"><button type="button" class="toggle-btn" id="swSave"></button><button type="button" class="toggle-btn" id="swGo"></button><button type="button" class="toggle-btn" id="swCancel">${S.cancel}</button></div>
     </div>
     <div class="switch-panel" id="importPreview" role="group" aria-labelledby="ipH" hidden>
-      <h3 id="ipH">${he.storage.preview.h}</h3><p id="ipP"></p>
+      <h2 class="card-h" id="ipH">${he.storage.preview.h}</h2><p id="ipP"></p>
       <div class="in-btns"><button type="button" class="toggle-btn" id="ipConfirm">${he.storage.preview.confirm}</button><button type="button" class="toggle-btn" id="ipCancel">${he.storage.preview.cancel}</button></div>
     </div>
     <p class="in-msg" id="stMsg" role="status"></p>
-    <h3>${K.eraseH}</h3>
+    <h2 class="card-h">${K.eraseH}</h2>
     <div class="in-btns"><button type="button" class="toggle-btn" id="stErase">${K.erase}</button></div>
   </details>`;
 }
@@ -113,6 +113,7 @@ function storageCard(): Raw {
 export function buildShell(root: HTMLElement): void {
   const T = he;
   setHtml(root, html`
+    <a class="skip" href="#results">${T.app.skip}</a>
     <div class="top-bar"><button type="button" class="toggle-btn" id="btnTheme" aria-live="polite"></button></div>
     <h1>${T.app.title}</h1>
     <p class="subtitle" id="subtitle">${T.app.subtitleEmpty}</p>
@@ -126,7 +127,8 @@ export function buildShell(root: HTMLElement): void {
     ${freshnessCard()}
     ${storageCard()}
     ${editorCard()}
-    <div id="outEmpty" class="empty-box">${T.app.emptyBox}</div>
+    <div id="results" tabindex="-1"></div>
+    <div id="outEmpty" class="empty-box"><h2>${T.emptySteps.lead}</h2><ol>${T.emptySteps.steps.map((x) => html`<li>${x}</li>`)}</ol></div>
     <div id="outMain" hidden>
       <div class="compare-section first">
         <h2>${T.total.h}</h2>

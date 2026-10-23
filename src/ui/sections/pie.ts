@@ -67,8 +67,8 @@ export function renderPie({ P, C, now }: Ctx): void {
     const name = itemName(d), tk = tickerOf(d);
     const path = document.createElementNS(SVG_NS, 'path');
     path.setAttribute('d', arc(st, en)); path.setAttribute('class', `slice s${slot}`); path.setAttribute('data-id', id);
-    path.setAttribute('tabindex', '0');
-    path.setAttribute('aria-label', `${name}${tk ? ` (${tk})` : ''}: ${fmtPct(pct)}, ${fmtNis(d.valNis)}`);
+    // The SVG itself is an image with a label; the focusable legend rows and the table are the accessible equivalents.
+    path.setAttribute('aria-hidden', 'true');
     const showTip = (e: MouseEvent | null) => {
       setActive(id, true);
       setHtml(tip, html`<div class="t-name"><span class="t-swatch bg${slot}"></span>${name}${tk ? ` (${tk})` : ''}</div><div class="t-row">${he.trade.tipValue(fmtNis(d.valNis), fmtUsd(d.valNis / C.fx))}</div><div class="t-row">${he.trade.tipWeight(fmtPct(pct))}</div><div class="t-row">${gainHtml(d)}</div>`);
@@ -78,8 +78,6 @@ export function renderPie({ P, C, now }: Ctx): void {
     path.addEventListener('mouseenter', (e) => showTip(e));
     path.addEventListener('mousemove', moveTip);
     path.addEventListener('mouseleave', () => { setActive(id, false); tip.hidden = true; });
-    path.addEventListener('focus', () => setActive(id, true));
-    path.addEventListener('blur', () => setActive(id, false));
     svg.appendChild(path);
     if (pct >= 8) {
       const lp = polar((rO + rI) / 2, (st + en) / 2);
@@ -88,6 +86,7 @@ export function renderPie({ P, C, now }: Ctx): void {
     const li = document.createElement('li');
     li.setAttribute('data-id', id);
     li.tabIndex = 0;
+    li.setAttribute('aria-label', `${name}${tk ? ` (${tk})` : ''}: ${fmtPct(pct)}, ${fmtNis(d.valNis)}`);
     setHtml(li, html`<span class="swatch bg${slot}"></span><span class="lg-text"><span class="lg-name">${name}${tk ? html` <span class="c-muted">${tk}</span>` : ''}</span><span class="lg-sub">${fmtNis(d.valNis)}</span><span class="lg-sub">${gainHtml(d)}</span></span><span class="lg-pct"><span class="lg-pct-l">${he.trade.weight}</span>${fmtPct(pct)}</span>`);
     li.addEventListener('mouseenter', () => setActive(id, true));
     li.addEventListener('mouseleave', () => setActive(id, false));

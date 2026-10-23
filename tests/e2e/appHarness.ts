@@ -13,6 +13,8 @@ export interface OpenOpts extends Scenario {
   mode?: 'browser' | 'file' | 'none';
   /** Overrides the served data files (path relative to data/ -> JSON). Default: derived from `pack`. */
   files?: Record<string, unknown>;
+  /** Skip the frozen clock (needed to measure real durations: a fixed clock also freezes performance.now). */
+  realClock?: boolean;
   /** Page to open (default '/'), e.g. '/?drafts=1'. */
   url?: string;
   /** Runs before the app loads (e.g. to install browser API fakes). */
@@ -26,7 +28,7 @@ export async function openApp(browser: Browser, o: OpenOpts): Promise<{ page: Pa
     viewport: o.viewport ?? { width: 1100, height: 900 }, baseURL: 'http://localhost:4173',
   });
   const page = await ctx.newPage();
-  await page.clock.setFixedTime(new Date(FROZEN_NOW));
+  if (!o.realClock) await page.clock.setFixedTime(new Date(FROZEN_NOW));
   // Serve the synthetic pack through the real file layout (market.json, history/, fundamentals/, analysis/, ...).
   const files = o.files ?? packToFiles(o.pack as Record<string, unknown>);
   await page.route('**/data/**', (r) => {
@@ -46,7 +48,7 @@ export async function openApp(browser: Browser, o: OpenOpts): Promise<{ page: Pa
   page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
   await page.goto(o.url ?? '/');
   await page.waitForLoadState('networkidle');
-  await page.waitForSelector('#outMain, #outEmpty', { state: 'attached' });
+  if (!(o.url ?? '/').includes('privacy')) await page.waitForSelector('#outMain, #outEmpty', { state: 'attached' });
   return { page, errors, close: () => ctx.close() };
 }
 

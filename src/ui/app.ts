@@ -55,6 +55,7 @@ export async function startApp(root: HTMLElement): Promise<void> {
   }
 
   function render() {
+    performance.mark('render:start');
     const M = market();
     const C = compute(P, M);
     const ctx: Ctx = { P, M, C, now: new Date() };
@@ -70,9 +71,25 @@ export async function startApp(root: HTMLElement): Promise<void> {
     show('anaTitle', any);
     renderCashFlow(ctx);
     renderFreshness(ctx);
+    markScrollRegions();
     $('demoNotice').hidden = !M.demo;
     $('draftBanner').hidden = !previewDrafts;
+    performance.measure('render', 'render:start');
   }
+
+  /** Tables that overflow are keyboard-scrollable regions with a name; those that fit stay out of the tab order. */
+  function markScrollRegions() {
+    document.querySelectorAll<HTMLElement>('.bf-wrap').forEach((el) => {
+      const scrolls = el.scrollWidth > el.clientWidth + 1 || el.scrollHeight > el.clientHeight + 1;
+      if (scrolls && !el.hidden) {
+        el.tabIndex = 0;
+        el.setAttribute('role', 'region');
+        const title = el.closest('.compare-section')?.querySelector('h2')?.textContent;
+        if (title) el.setAttribute('aria-label', title);
+      } else { el.removeAttribute('tabindex'); el.removeAttribute('role'); el.removeAttribute('aria-label'); }
+    });
+  }
+  window.addEventListener('resize', () => markScrollRegions());
 
   function rebuild() { buildEditor(P); buildCashFlowInputs(P); syncWithdrawalInputs(P); syncTopFields(P); }
 

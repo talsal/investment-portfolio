@@ -28,9 +28,11 @@
     "analysis:dry-run": "tsx scripts/analysis/generate.ts --dry-run",
     "analysis:approve": "tsx scripts/analysis/approve.ts",
     "analysis:prompt": "tsx scripts/analysis/manual-flow.ts prompt",
-    "analysis:import": "tsx scripts/analysis/manual-flow.ts import"
+    "analysis:import": "tsx scripts/analysis/manual-flow.ts import",
+    "audit:publication": "node scripts/audit-publication.mjs"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.14.0",
     "@playwright/test": "^1.64.1",
     "@types/node": "^26.6.5",
     "tsx": "^4.23.15",

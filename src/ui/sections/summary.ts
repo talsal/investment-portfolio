@@ -15,7 +15,7 @@ export function renderTotals({ C }: Ctx): void {
   $('totNis').textContent = fmtNis(C.total);
   $('totUsd').textContent = fmtUsd(C.total / C.fx);
   const parts = ([[he.total.trade, C.tradeTotal, 1], [he.total.gemel, C.gemelTotal, 3], [he.total.hish, C.hishTotal, 4]] as const).filter((x) => x[1] > 0);
-  setHtml($('splitBar'), html`${parts.map(([, v, slot]) => { const p = (v / C.total) * 100; return html`<div class="compare-seg bg${slot}" data-w="${p}">${p >= 12 ? Math.round(p) + '%' : ''}</div>`; })}`);
+  setHtml($('splitBar'), html`${parts.map(([, v, slot]) => { const p = (v / C.total) * 100; return html`<div class="compare-seg bg${slot}" data-w="${p}">${p >= 12 ? html`<span class="seg-t">${Math.round(p) + '%'}</span>` : ''}</div>`; })}`);
   $('splitBar').querySelectorAll<HTMLElement>('[data-w]').forEach((el) => { el.style.width = `${el.dataset.w}%`; });
   setHtml($('splitLegend'), html`${parts.map(([name, v, slot]) => html`<div class="cl-item"><span class="cl-swatch bg${slot}"></span><span class="cl-text"><span class="cl-name">${name}</span><span class="cl-sub">${fmtNis(v)} (${fmtPct((v / C.total) * 100)})</span></span></div>`)}`);
 }
@@ -95,13 +95,13 @@ export function renderBenchmark({ P, M, C }: Ctx): void {
   show('bmSection', !!(useBm && cmp) || !!msg.textContent);
   if (!useBm || !cmp) { for (const id of ['bmBasket', 'bmSpy', 'bmDiff', 'bmTable']) $(id).textContent = ''; $('bmNote').textContent = ''; return; }
   const bs = (v: number) => colored(v, pcs(v), 'b6');
-  const dfc = (v: number, suffix: string) => html`<span dir="ltr" class="${tone(v)} b6">${(v >= 0 ? '+' : '−') + Math.abs(v).toFixed(2)} ${suffix}</span>`;
+  const dfc = (v: number, unit: (n: string) => string) => html`<span dir="ltr" class="${tone(v)} b6">${unit((v >= 0 ? '+' : '−') + Math.abs(v).toFixed(2))}</span>`;
   setHtml($('bmBasket'), bs(cmp.basketPct));
   setHtml($('bmSpy'), bs(cmp.spyPct));
-  setHtml($('bmDiff'), dfc(cmp.diff, 'נק׳ אחוז'));
+  setHtml($('bmDiff'), dfc(cmp.diff, he.benchmark.points));
   setHtml($('bmTable'), dataTable([th(he.benchmark.th.stock), th(he.benchmark.th.base(useBm.dateLabel), true), th(he.benchmark.th.cur, true), th(he.benchmark.th.change, true), th(he.benchmark.th.vs, true)], [
-    ...cmp.rows.map((r) => tr([td(r.T), td(ltr(fmtUsd(r.base)), true), td(ltr(fmtUsd(r.px)), true), td(bs(r.changePct), true), td(dfc(r.vsSpy, 'נק׳'), true)])),
-    tr([td(he.benchmark.totalRow), td(ltr(fmtUsd(cmp.vb)), true), td(ltr(fmtUsd(cmp.vc)), true), td(bs(cmp.basketPct), true), td(dfc(cmp.diff, 'נק׳'), true)], 'b6'),
+    ...cmp.rows.map((r) => tr([td(r.T), td(ltr(fmtUsd(r.base)), true), td(ltr(fmtUsd(r.px)), true), td(bs(r.changePct), true), td(dfc(r.vsSpy, he.benchmark.pts), true)])),
+    tr([td(he.benchmark.totalRow), td(ltr(fmtUsd(cmp.vb)), true), td(ltr(fmtUsd(cmp.vc)), true), td(bs(cmp.basketPct), true), td(dfc(cmp.diff, he.benchmark.pts), true)], 'b6'),
     tr([td(he.benchmark.spyRow), td(ltr(fmtUsd(useBm.spyBase)), true), td(ltr(fmtUsd(useBm.spyCur)), true), td(bs(cmp.spyPct), true), td('-', true)]),
   ]));
   $('bmNote').textContent = he.benchmark.foot(useBm.dateLabel);

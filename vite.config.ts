@@ -43,6 +43,9 @@ export default defineConfig({
   // Relative base so the build works under https://<user>.github.io/<repo>/.
   base: './',
   plugins: [staticDataAndCsp()],
-  build: { target: 'es2022', sourcemap: true, assetsInlineLimit: 0, modulePreload: { polyfill: false } },
+  build: {
+    target: 'es2022', sourcemap: true, assetsInlineLimit: 0, modulePreload: { polyfill: false },
+    rollupOptions: { input: { main: resolve('index.html'), privacy: resolve('privacy.html') } },
+  },
   test: { include: ['tests/unit/**/*.test.ts'] },
 });

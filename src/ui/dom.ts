@@ -10,7 +10,7 @@ export const $ = <T extends HTMLElement = HTMLElement>(id: string): T => {
 export const tile = (k: Part, v: Part, sub: Part): Raw =>
   html`<div class="cf-tile"><div class="k">${k}</div><div class="v">${v}</div><div class="s">${sub}</div></div>`;
 
-export const th = (c: Part, num = false): Raw => html`<th class="${num ? 'num' : ''}">${c}</th>`;
+export const th = (c: Part, num = false): Raw => html`<th scope="col" class="${num ? 'num' : ''}">${c}</th>`;
 export const td = (c: Part, num = false, cls = ''): Raw => html`<td class="${[num ? 'num' : '', cls].filter(Boolean).join(' ')}">${c}</td>`;
 export const tr = (cells: Part[], cls = ''): Raw => html`<tr class="${cls}">${cells}</tr>`;
 export const dataTable = (head: Part[], rows: Part[]): Raw =>

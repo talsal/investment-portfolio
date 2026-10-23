@@ -7,12 +7,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with: { fetch-depth: 0 } # the publication audit scans the whole history
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: npm }
       - run: npm ci
       - run: npm run check:private
+      - run: npm run audit:publication
       - run: npm run typecheck
       - run: npm run data:validate
       - run: npm test
       - run: npx playwright install --with-deps chromium
       - run: npm run test:golden
+      - run: npm run test:e2e

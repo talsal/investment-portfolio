@@ -1,0 +1,3 @@
+#!/bin/sh
+# Blocks a push if the history contains private files, secrets, or values from your private data files.
+exec node scripts/audit-publication.mjs
