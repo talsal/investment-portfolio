@@ -59,7 +59,7 @@ jobs:
         run: npm run data:validate
       - name: Open a pull request for human review
         if: steps.key.outputs.present == 'true'
-        uses: peter-evans/create-pull-request@v7
+        uses: peter-evans/create-pull-request@v8
         with:
           branch: analysis/drafts
           delete-branch: true
