@@ -180,10 +180,10 @@ export function buildShell(root: HTMLElement): void {
       <h3 class="cf-sub">${T.cashflow.barsH}</h3><div class="cf-bars" id="cfBars"></div>
       <div class="cf-link" id="cfLink"></div><p class="rate-note" id="cfNote"></p>
       <button type="button" class="toggle-btn mt8" id="cfClear">${T.cashflow.clear}</button>`, { note: T.cashflow.note, collapsible: true })}
-    <div class="compare-section" id="glossarySection">
-      <h2>${T.glossary.h}</h2>
+    <details class="compare-section collapsible" id="glossarySection">
+      <summary><h2>${T.glossary.h}</h2></summary>
       <dl class="glossary">${GLOSSARY.map(([term, def]) => html`<dt>${term}</dt><dd>${def}</dd>`)}</dl>
-    </div>
+    </details>
     </div>
     <div id="tooltip" class="tooltip" hidden></div>`);
 }

@@ -86,3 +86,15 @@ test.describe('collapsible income and expenses', () => {
     await close();
   });
 });
+
+test('the glossary opens and closes like the other collapsible sections (starts closed)', async ({ browser }) => {
+  const { page, close } = await openApp(browser, { profile: {}, pack, seed: false });
+  await expect(page.locator('#glossarySection')).toHaveJSProperty('open', false);
+  await expect(page.locator('#glossarySection dl')).toBeHidden();
+  await page.locator('#glossarySection > summary').click();
+  await expect(page.locator('#glossarySection dl')).toBeVisible();
+  await expect(page.locator('#glossarySection dt').first()).toContainText('מכפיל רווח');
+  await page.locator('#glossarySection > summary').click();
+  await expect(page.locator('#glossarySection dl')).toBeHidden();
+  await close();
+});
