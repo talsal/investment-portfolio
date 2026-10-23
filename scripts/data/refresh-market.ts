@@ -1,6 +1,6 @@
 import { pathToFileURL } from 'node:url';
 import { DATA_SCHEMA, type CpiFile, type GroupId, type GroupStatus, type MarketFile, type MarketTicker } from '../../src/data/schema';
-import { parseCpiFile, parseHistoryFile, parseMarketFile, parseUniverseFile } from '../../src/data/validate';
+import { parseCpiFile, parseHistoryFile, parseManualFile, parseMarketFile, parseUniverseFile } from '../../src/data/validate';
 import { RULES } from '../../src/config/rules';
 import { buildProviders, type Providers } from '../../providers/registry';
 import { paced } from '../../providers/http';
@@ -91,7 +91,19 @@ export async function refreshMarket(o: RefreshOptions): Promise<RefreshSummary> 
     for (const sym of symbols) { failedSymbols.push(sym); const keep = prev?.tickers[sym]; if (keep) priced[sym] = { ...keep, stale: true }; }
     log(`prices skipped: ${s?.reason ?? 'no provider configured'}`);
   }
-  const quotesSource = P.history?.info.id ?? P.quote?.info.id ?? skippedFor('history')?.id ?? 'none';
+  // Zero-cost mode: a price typed by the owner in data/manual/<SYMBOL>.json fills in where no provider gave one.
+  let manualPriced = 0;
+  for (const sym of symbols) {
+    if (priced[sym] && !priced[sym]!.stale) continue;
+    const mp = parseManualFile(readJson(dataDir, `manual/${sym}.json`))?.price;
+    if (!mp) continue;
+    priced[sym] = { ...(prev?.tickers[sym] ?? {}), price: mp.value, asof: mp.asof, currency: 'USD' };
+    delete priced[sym]!.stale;
+    const i = failedSymbols.indexOf(sym);
+    if (i >= 0) failedSymbols.splice(i, 1);
+    manualPriced++;
+  }
+  const quotesSource = !P.history && !P.quote && manualPriced ? 'manual' : P.history?.info.id ?? P.quote?.info.id ?? skippedFor('history')?.id ?? 'none';
   for (const sym of symbols) {
     if (sym === universe.benchmark) continue;
     const t = priced[sym];

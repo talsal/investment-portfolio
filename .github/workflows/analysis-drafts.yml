@@ -1,0 +1,70 @@
+name: Draft analysis (paid API, manual only)
+
+# COSTS MONEY: every run calls the Anthropic API (a few cents per stock). It is deliberately NOT scheduled and runs
+# only when you press "Run workflow". Without the ANTHROPIC_API_KEY secret it does nothing and spends nothing.
+# Free alternative: `npm run analysis:prompt -- SYMBOL`, paste into a chat you already use, then
+# `npm run analysis:import -- SYMBOL reply.json` (see docs/analysis-pipeline.md).
+on:
+  workflow_dispatch:
+    inputs:
+      symbols:
+        description: 'Comma-separated symbols (empty = whatever needs analysis, up to the limit)'
+        required: false
+        default: ''
+      max:
+        description: 'Maximum number of stocks this run'
+        required: false
+        default: '3'
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: analysis-drafts
+  cancel-in-progress: false
+
+jobs:
+  draft:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+    steps:
+      - name: Check for an API key
+        id: key
+        run: |
+          if [ -z "$ANTHROPIC_API_KEY" ]; then
+            echo "No ANTHROPIC_API_KEY secret: nothing was run and nothing was spent." >> "$GITHUB_STEP_SUMMARY"
+            echo "present=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/checkout@v4
+        if: steps.key.outputs.present == 'true'
+      - uses: actions/setup-node@v4
+        if: steps.key.outputs.present == 'true'
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+        if: steps.key.outputs.present == 'true'
+      - name: Generate drafts
+        if: steps.key.outputs.present == 'true'
+        run: npm run analysis:generate
+        env:
+          ANALYSIS_SYMBOLS: ${{ inputs.symbols }}
+          ANALYSIS_MAX: ${{ inputs.max }}
+          ANALYSIS_MODEL: ${{ vars.ANALYSIS_MODEL }}
+      - name: Validate data files
+        if: steps.key.outputs.present == 'true'
+        run: npm run data:validate
+      - name: Open a pull request for human review
+        if: steps.key.outputs.present == 'true'
+        uses: peter-evans/create-pull-request@v7
+        with:
+          branch: analysis/drafts
+          delete-branch: true
+          title: 'Draft analysis for review'
+          body-path: analysis-pr-body.md
+          commit-message: 'analysis: machine drafts for review (not approved)'
+          labels: analysis-draft
+          add-paths: data/analysis/*.draft.json,data/market.json

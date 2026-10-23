@@ -35,7 +35,8 @@ export class DataLoader {
   private composed: MarketData | null = null;
   coreLoaded = false;
 
-  constructor(private base = './data/', private get: Fetcher = fetchJson) {}
+  /** `includeDrafts` is the reviewer preview (?drafts=1): machine drafts are fetched and shown labelled. */
+  constructor(private base = './data/', private get: Fetcher = fetchJson, private includeDrafts = false) {}
 
   async loadCore(): Promise<boolean> {
     const [market, cpi] = await Promise.all([this.get(`${this.base}market.json`), this.get(`${this.base}cpi.json`)]);
@@ -64,10 +65,11 @@ export class DataLoader {
     const hist = [...new Set([...w.held, ...w.traded])].filter(known);
     const jobs: Array<Promise<boolean>> = [];
     // market.json says which files exist (`has`); without that hint (older files) every kind is tried.
-    const has = (s: string, kind: 'fundamentals' | 'analysis' | 'manual' | 'history') => { const h = m.tickers[s]?.has; return !h || h.includes(kind); };
+    const has = (s: string, kind: 'fundamentals' | 'analysis' | 'draft' | 'manual' | 'history') => { const h = m.tickers[s]?.has; return !h || h.includes(kind); };
     for (const s of analyse) {
       if (has(s, 'fundamentals')) jobs.push(this.one(`f:${s}`, `fundamentals/${s}.json`, parseFundamentalsFile, (v) => { this.bundle.fundamentals[s] = v; }));
       if (has(s, 'analysis')) jobs.push(this.one(`a:${s}`, `analysis/${s}.json`, parseAnalysisFile, (v) => { this.bundle.analysis[s] = v; }));
+      if (this.includeDrafts && has(s, 'draft')) jobs.push(this.one(`d:${s}`, `analysis/${s}.draft.json`, (o) => parseAnalysisFile(o, 'draft'), (v) => { this.bundle.drafts[s] = v; }));
       if (has(s, 'manual')) jobs.push(this.one(`m:${s}`, `manual/${s}.json`, parseManualFile, (v) => { this.bundle.manual[s] = v; }));
     }
     if (hist.length) {

@@ -9,10 +9,12 @@ export interface DataBundle {
   history: Record<string, HistoryFile>;
   fundamentals: Record<string, FundamentalsFile>;
   analysis: Record<string, AnalysisFile>;
+  /** Machine drafts; only populated in reviewer preview mode (?drafts=1). */
+  drafts: Record<string, AnalysisFile>;
   manual: Record<string, ManualFile>;
 }
 
-export const emptyBundle = (): DataBundle => ({ market: null, cpi: null, spy: null, usdIls: null, history: {}, fundamentals: {}, analysis: {}, manual: {} });
+export const emptyBundle = (): DataBundle => ({ market: null, cpi: null, spy: null, usdIls: null, history: {}, fundamentals: {}, analysis: {}, drafts: {}, manual: {} });
 
 const dmy = (iso: string): string => `${iso.slice(8, 10)}.${iso.slice(5, 7)}.${iso.slice(0, 4)}`;
 
@@ -32,11 +34,13 @@ export function alignSeries(master: string[], src: { dates: string[]; close: num
 }
 
 /** Provider numbers, then owner-supplied manual numbers, then *approved* analysis text. Drafts never reach the UI as facts. */
-export function mergeBf(f: FundamentalsFile | undefined, a: AnalysisFile | undefined, manual?: ManualFile): BfInputs | undefined {
-  const ok = a && a.status === 'approved' ? a : undefined;
+export function mergeBf(f: FundamentalsFile | undefined, a: AnalysisFile | undefined, manual?: ManualFile, draft?: AnalysisFile): BfInputs | undefined {
+  // A draft (preview mode) takes precedence over the approved text so a reviewer sees what would change.
+  const ok = draft && draft.status === 'draft' ? draft : a && a.status === 'approved' ? a : undefined;
   if (!f && !ok && !manual?.inputs) return undefined;
   const bf: BfInputs = { ...(f?.inputs ?? {}), ...(manual?.inputs ?? {}) };
   if (ok) {
+    if (ok.status === 'draft') bf.draft = true;
     for (const k of ['moat', 'moatTxt', 'growth', 'growthTxt', 'track', 'cyclical', 'next', 'pen', 'peNotes', 'fcfNotes'] as const) {
       if (ok[k] !== undefined) (bf as Record<string, unknown>)[k] = ok[k];
     }
@@ -63,7 +67,7 @@ export function composeMarket(b: DataBundle): MarketData {
     if (events?.length) pk.events = events;
     if (div) pk.div = div;
     if (man?.watchAdded) pk.watchAdded = man.watchAdded;
-    const bf = mergeBf(f, b.analysis[sym], man);
+    const bf = mergeBf(f, b.analysis[sym], man, b.drafts[sym]);
     if (bf) pk.bf = bf;
     if (f?.base) pk.base = f.base;
     if (t.stale) stalePrices.push(sym);
@@ -87,6 +91,8 @@ export function composeMarket(b: DataBundle): MarketData {
   const meta: MarketMeta = {
     groups: m.groups,
     fundamentalsAsof: Object.fromEntries(Object.entries(b.fundamentals).map(([k, v]) => [k, v.asof])),
+    analysisAsof: Object.fromEntries(Object.entries(b.analysis).filter(([, v]) => v.status === 'approved').map(([k, v]) => [k, v.reviewedAt ?? v.asof])),
+    draftsShown: Object.keys(b.drafts),
     stalePrices,
     cpiAsof: b.cpi?.asof ?? null,
     historyAsof: spy?.asof ?? null,

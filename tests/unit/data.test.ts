@@ -44,7 +44,8 @@ describe('validators', () => {
     expect(parseFundamentalsFile({ schema: 1, symbol: 'A', source: 's', asof: '2026-09-30', fetchedAt: 'x', inputs: { epsT: null, epsF: 3, earnOk: true }, base: ['1', '2', '3', '4', '5'] })).not.toBeNull();
     expect(parseFundamentalsFile({ schema: 1, symbol: 'A', source: 's', asof: '2026-09-30', fetchedAt: 'x', inputs: { epsF: '3' } })).toBeNull();
     expect(parseFundamentalsFile({ schema: 1, symbol: 'A', source: 's', asof: '2026-09-30', fetchedAt: 'x', inputs: {}, base: ['1'] })).toBeNull();
-    expect(parseAnalysisFile({ schema: 1, symbol: 'A', status: 'approved', asof: '2026-09-30', moat: 'ok', growth: 'up' })).not.toBeNull();
+    expect(parseAnalysisFile({ schema: 1, symbol: 'A', status: 'approved', asof: '2026-09-30', reviewedBy: 'Owner', reviewedAt: '2026-10-01', moat: 'ok', growth: 'up' })).not.toBeNull();
+    expect(parseAnalysisFile({ schema: 1, symbol: 'A', status: 'approved', asof: '2026-09-30', moat: 'ok', growth: 'up' })).toBeNull(); // approval needs a named reviewer
     expect(parseAnalysisFile({ schema: 1, symbol: 'A', status: 'published', asof: '2026-09-30' })).toBeNull();
     expect(parseAnalysisFile({ schema: 1, symbol: 'A', status: 'draft', asof: '2026-09-30', moat: 'great' })).toBeNull();
     expect(parseManualFile({ schema: 1, symbol: 'A', asof: '2026-09-30', div: { perShare: 1, freq: 4 }, events: [{ d: null, what: 'x' }] })).not.toBeNull();
@@ -69,7 +70,7 @@ describe('alignSeries', () => {
 
 describe('mergeBf', () => {
   const f = { schema: 1, symbol: 'A', source: 's', asof: '2026-09-30', fetchedAt: 'x', inputs: { epsF: 5, fcfPs: 2 } };
-  const a = { schema: 1, symbol: 'A', asof: '2026-09-30', moat: 'ok', growth: 'up', moatTxt: 't' } as const;
+  const a = { schema: 1, symbol: 'A', asof: '2026-09-30', moat: 'ok', growth: 'up', moatTxt: 't', reviewedBy: 'Owner', reviewedAt: '2026-10-01' } as const;
   it('adds approved analysis text to the numbers', () => {
     expect(mergeBf(f, { ...a, status: 'approved' })).toMatchObject({ epsF: 5, moat: 'ok', growth: 'up', moatTxt: 't' });
   });

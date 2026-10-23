@@ -27,7 +27,9 @@ export async function startApp(root: HTMLElement): Promise<void> {
   applyTheme(loadTheme());
   const ctrl = new StorageController(browserDeps());
   let P: Profile = blankProfile();
-  const loader = new DataLoader();
+  // Reviewer preview: ?drafts=1 also loads machine drafts (clearly labelled). Visitors never see them otherwise.
+  const previewDrafts = new URLSearchParams(location.search).get('drafts') === '1';
+  const loader = new DataLoader('./data/', undefined, previewDrafts);
   let exampleMarket: MarketData | null = null;
   const market = (): MarketData => (P.settings.example && exampleMarket ? exampleMarket : loader.market());
 
@@ -69,6 +71,7 @@ export async function startApp(root: HTMLElement): Promise<void> {
     renderCashFlow(ctx);
     renderFreshness(ctx);
     $('demoNotice').hidden = !M.demo;
+    $('draftBanner').hidden = !previewDrafts;
   }
 
   function rebuild() { buildEditor(P); buildCashFlowInputs(P); syncWithdrawalInputs(P); syncTopFields(P); }

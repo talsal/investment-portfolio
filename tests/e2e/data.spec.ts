@@ -185,3 +185,51 @@ test.describe('benchmark base date', () => {
     await close();
   });
 });
+
+test.describe('analysis drafts and approval', () => {
+  const draftFile = { schema: 1, symbol: 'ALFA', status: 'draft', asof: '2026-10-23', moat: 'bad', moatTxt: 'טיוטת בדיקה', growth: 'neg', growthTxt: 'טיוטה', generatedAt: '2026-10-23T09:00:00Z', model: 'm' };
+  const withDraft = () => {
+    const files = base();
+    files['analysis/ALFA.draft.json'] = draftFile;
+    files['market.json'].tickers.ALFA.has.push('draft');
+    return files;
+  };
+
+  test('visitors never see or even download a draft', async ({ browser }) => {
+    const { page, close } = await openApp(browser, { profile, pack, files: withDraft() });
+    const urls: string[] = [];
+    page.on('request', (r) => { if (r.url().includes('draft')) urls.push(r.url()); });
+    await page.reload();
+    await page.waitForLoadState('networkidle');
+    expect(urls).toEqual([]);
+    await expect(page.locator('#bfTable')).not.toContainText('טיוטת בדיקה');
+    await expect(page.locator('#draftBanner')).toBeHidden();
+    await close();
+  });
+
+  test('reviewer preview (?drafts=1) shows the draft, labelled, with a banner', async ({ browser }) => {
+    const { page, errors, close } = await openApp(browser, { profile, pack, files: withDraft(), url: '/?drafts=1' });
+    await expect(page.locator('#draftBanner')).toBeVisible();
+    const row = page.locator('#bfTable tbody tr', { hasText: 'ALFA' });
+    await expect(row).toContainText('טיוטה');
+    await expect(row).toContainText('טיוטת בדיקה');
+    await expect(page.locator('#bfTable tbody tr', { hasText: 'BETA' })).not.toContainText('טיוטה'); // no draft for BETA: approved text, unlabelled
+    expect(errors).toEqual([]);
+    await close();
+  });
+
+  test('a file that claims approval without a named reviewer is ignored', async ({ browser }) => {
+    const files = base();
+    delete files['analysis/ALFA.json'].reviewedBy;
+    const { page, close } = await openApp(browser, { profile, pack, files });
+    await expect(page.locator('#bfTable tbody tr', { hasText: 'ALFA' })).toContainText('– אין ניתוח');
+    await close();
+  });
+
+  test('the freshness panel lists when the analysis was reviewed', async ({ browser }) => {
+    const { page, close } = await openApp(browser, { profile, pack });
+    await page.evaluate(() => { (document.getElementById('freshness') as HTMLDetailsElement).open = true; });
+    await expect(page.locator('#freshList')).toContainText('ניתוח איכותי (נבדק ואושר)');
+    await close();
+  });
+});

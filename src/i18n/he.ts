@@ -377,7 +377,7 @@ export const he = {
   freshness: {
     h: 'עדכניות הנתונים',
     summary: { ok: 'כל הנתונים עדכניים', stale: 'חלק מהנתונים אינם עדכניים', unavailable: 'חלק מהנתונים אינם זמינים', missing: 'חלק מהנתונים חסרים' },
-    label: { quotes: 'מחירי מניות', fx: 'שער דולר-שקל', benchmark: 'מדד S&P 500', calendar: 'דיבידנדים ולוח דוחות', cpi: 'מדד המחירים לצרכן', fundamentals: 'נתוני יסוד לניתוח', history: 'היסטוריית מחירים' },
+    label: { quotes: 'מחירי מניות', fx: 'שער דולר-שקל', benchmark: 'מדד S&P 500', calendar: 'דיבידנדים ולוח דוחות', cpi: 'מדד המחירים לצרכן', fundamentals: 'נתוני יסוד לניתוח', history: 'היסטוריית מחירים', analysis: 'ניתוח איכותי (נבדק ואושר)' },
     source: { boi: 'בנק ישראל', cbs: 'הלמ"ס', twelvedata: 'Twelve Data', finnhub: 'Finnhub', tase: 'הבורסה לניירות ערך', manual: 'עדכון ידני' },
     line: {
       ok: (date: string) => `נכון ל-${date}`,
@@ -388,6 +388,11 @@ export const he = {
     reason: { 'skipped:licence-not-acknowledged': 'מקור הנתונים טרם אושר לפרסום', 'skipped:not-configured': 'לא הוגדר מקור נתונים', 'empty-universe': 'לא הוגדרו מניות למעקב', 'benchmark-not-refreshed': 'לא עודכן בריצה האחרונה' } as Record<string, string>,
     stalePrices: (list: string) => `המחיר לא עודכן בריצה האחרונה עבור: ${list}. מוצג המחיר האחרון הידוע.`,
     sourceLead: 'מקור: ',
+  },
+  draft: {
+    tag: 'טיוטה',
+    banner: 'תצוגה מקדימה לבודק: מוצגות טיוטות ניתוח שלא אושרו, והן מסומנות "טיוטה". אין לפרסם את הקישור הזה.',
+    uncertain: 'מה שלא אומת:',
   },
   request: {
     noAnalysis: 'אין ניתוח זמין למניות האלה',

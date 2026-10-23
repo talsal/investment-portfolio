@@ -16,6 +16,7 @@ export function reindex(dataDir: string): boolean {
     const has: NonNullable<typeof t.has> = [];
     if (fileExists(dataDir, `fundamentals/${sym}.json`)) has.push('fundamentals');
     if (fileExists(dataDir, `analysis/${sym}.json`)) has.push('analysis');
+    if (fileExists(dataDir, `analysis/${sym}.draft.json`)) has.push('draft');
     if (fileExists(dataDir, `manual/${sym}.json`)) has.push('manual');
     if (fileExists(dataDir, `history/${sym}.json`)) has.push('history');
     if (JSON.stringify(has) !== JSON.stringify(t.has ?? [])) changed = true;

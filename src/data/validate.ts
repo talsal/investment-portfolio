@@ -66,7 +66,7 @@ export function parseMarketFile(o: unknown): MarketFile | null {
       price: t.price, asof: t.asof, currency: 'USD',
       ...(str(t.name, 80) ? { name: t.name } : {}), ...(dv ? { div: { ...dv, ...(isoDate((t.div as Obj).asof) ? { asof: (t.div as Obj).asof as string } : {}), ...(str((t.div as Obj).source, 30) ? { source: (t.div as Obj).source as string } : {}) } } : {}),
       ...(ev ? { events: ev } : {}), ...(t.stale === true ? { stale: true } : {}),
-      ...(Array.isArray(t.has) ? { has: (t.has as unknown[]).filter((x): x is 'fundamentals' | 'analysis' | 'manual' | 'history' => x === 'fundamentals' || x === 'analysis' || x === 'manual' || x === 'history') } : {}),
+      ...(Array.isArray(t.has) ? { has: (t.has as unknown[]).filter((x): x is 'fundamentals' | 'analysis' | 'draft' | 'manual' | 'history' => x === 'fundamentals' || x === 'analysis' || x === 'draft' || x === 'manual' || x === 'history') } : {}),
     };
   }
   return out;
@@ -108,9 +108,24 @@ export function parseFundamentalsFile(o: unknown): FundamentalsFile | null {
 }
 
 const MOAT = ['ok', 'weak', 'bad', 'none', 'contested'], GROWTH = ['up', 'slow', 'flat', 'neg', 'na'];
-export function parseAnalysisFile(o: unknown): AnalysisFile | null {
+/**
+ * Reads an analysis file. `approved` is only accepted with a named reviewer and a review date, so a file that
+ * merely *claims* approval (or was produced by a machine) is ignored. `kind` says which file it is: the published
+ * file may be draft-status but is never shown; a `.draft.json` must be a draft.
+ */
+export function parseAnalysisFile(o: unknown, kind: 'published' | 'draft' = 'published'): AnalysisFile | null {
   if (!isObj(o) || !schemaOk(o) || !isSymbol(o.symbol) || !(o.status === 'draft' || o.status === 'approved') || !isoDate(o.asof)) return null;
+  if (kind === 'draft' && o.status !== 'draft') return null;
   const out: AnalysisFile = { schema: o.schema as number, symbol: o.symbol, status: o.status, asof: o.asof };
+  if (o.status === 'approved') {
+    if (!str(o.reviewedBy, 80) || !(o.reviewedBy as string).trim() || !isoDate(o.reviewedAt)) return null;
+  }
+  if (o.reviewedBy !== undefined) { if (!str(o.reviewedBy, 80)) return null; out.reviewedBy = o.reviewedBy; }
+  if (o.reviewedAt !== undefined) { if (!isoDate(o.reviewedAt)) return null; out.reviewedAt = o.reviewedAt; }
+  if (o.generatedAt !== undefined) { if (!str(o.generatedAt, 40)) return null; out.generatedAt = o.generatedAt; }
+  if (o.model !== undefined) { if (!str(o.model, 60)) return null; out.model = o.model; }
+  if (o.confidence !== undefined) { if (!['low', 'medium', 'high'].includes(o.confidence as string)) return null; out.confidence = o.confidence as AnalysisFile['confidence']; }
+  for (const k of ['uncertainties', 'flags'] as const) { if (o[k] !== undefined) { if (!Array.isArray(o[k]) || (o[k] as unknown[]).length > 12 || !(o[k] as unknown[]).every((x) => str(x, 300))) return null; out[k] = o[k] as string[]; } }
   if (o.moat !== undefined) { if (!MOAT.includes(o.moat as string)) return null; out.moat = o.moat as AnalysisFile['moat']; }
   if (o.growth !== undefined) { if (!GROWTH.includes(o.growth as string)) return null; out.growth = o.growth as AnalysisFile['growth']; }
   for (const k of ['moatTxt', 'growthTxt', 'track', 'next', 'pen'] as const) { if (o[k] !== undefined) { if (!str(o[k], 600)) return null; out[k] = o[k] as string; } }
@@ -126,6 +141,10 @@ export function parseManualFile(o: unknown): ManualFile | null {
   if (dv === null || ev === null) return null;
   if (dv) out.div = dv;
   if (ev) out.events = ev;
+  if (o.price !== undefined) {
+    if (!isObj(o.price) || !num(o.price.value) || o.price.value <= 0 || !isoDate(o.price.asof)) return null;
+    out.price = { value: o.price.value, asof: o.price.asof };
+  }
   if (o.inputs !== undefined) {
     const f = parseFundamentalsInputs(o.inputs);
     if (!f) return null;

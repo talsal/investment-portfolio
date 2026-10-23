@@ -23,7 +23,12 @@
     "data:fundamentals": "tsx scripts/data/refresh-fundamentals.ts",
     "data:validate": "tsx scripts/data/validate-data.ts",
     "data:probe": "tsx scripts/data/probe.ts",
-    "data:reindex": "tsx -e \"import('./scripts/data/reindex.ts').then(m=>console.log(m.reindex(process.env.DATA_DIR??'data')?'market.json updated':'no change'))\""
+    "data:reindex": "tsx -e \"import('./scripts/data/reindex.ts').then(m=>console.log(m.reindex(process.env.DATA_DIR??'data')?'market.json updated':'no change'))\"",
+    "analysis:generate": "tsx scripts/analysis/generate.ts",
+    "analysis:dry-run": "tsx scripts/analysis/generate.ts --dry-run",
+    "analysis:approve": "tsx scripts/analysis/approve.ts",
+    "analysis:prompt": "tsx scripts/analysis/manual-flow.ts prompt",
+    "analysis:import": "tsx scripts/analysis/manual-flow.ts import"
   },
   "devDependencies": {
     "@playwright/test": "^1.64.1",
@@ -32,5 +37,8 @@
     "typescript": "^7.0.2",
     "vite": "^8.3.5",
     "vitest": "^5.0.5"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^1.1.0"
   }
 }

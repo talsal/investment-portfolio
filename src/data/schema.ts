@@ -39,7 +39,7 @@ export interface MarketTicker {
   div?: { perShare: number; freq: number; asof?: string; source?: string };
   events?: Array<{ d: string | null; what: string; st?: 'confirmed' | 'est' | 'unk' }>;
   /** Which per-ticker files exist, so the browser never requests (and logs 404s for) files that are not there. */
-  has?: Array<'fundamentals' | 'analysis' | 'manual' | 'history'>;
+  has?: Array<'fundamentals' | 'analysis' | 'draft' | 'manual' | 'history'>;
   /** Marks the price as carried over from an earlier run because the latest fetch failed. */
   stale?: boolean;
 }
@@ -87,11 +87,27 @@ export interface FundamentalsFile {
 }
 
 export type AnalysisStatus = 'draft' | 'approved';
+/**
+ * Qualitative analysis. `data/analysis/<SYMBOL>.json` is what the site shows and must be `approved` by a human
+ * (`reviewedBy` + `reviewedAt`). Machine drafts live in `data/analysis/<SYMBOL>.draft.json`, which the site never
+ * reads unless a reviewer opens it with `?drafts=1`.
+ */
 export interface AnalysisFile {
   schema: number;
   symbol: string;
   status: AnalysisStatus;
   asof: string;
+  /** Human review: both are required for `approved`. Never written by the generator. */
+  reviewedBy?: string;
+  reviewedAt?: string;
+  /** Draft provenance (generator only). */
+  generatedAt?: string;
+  model?: string;
+  confidence?: 'low' | 'medium' | 'high';
+  /** Things the model said it could not verify (shown to the reviewer). */
+  uncertainties?: string[];
+  /** Automatic warnings, e.g. numbers in the text that are not in the supplied inputs. */
+  flags?: string[];
   moat?: 'ok' | 'weak' | 'bad' | 'none' | 'contested';
   moatTxt?: string;
   growth?: 'up' | 'slow' | 'flat' | 'neg' | 'na';
@@ -113,6 +129,8 @@ export interface ManualFile {
   watchAdded?: { date: string; px: number };
   /** Owner-supplied fundamentals that free providers lack (e.g. forward EPS); overrides provider values. */
   inputs?: FundamentalsInputs;
+  /** Owner-typed price used when no provider gives one (zero-cost mode). */
+  price?: { value: number; asof: string };
 }
 
 export interface CpiFile {

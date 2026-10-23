@@ -30,8 +30,9 @@ function criteriaCells(inp: BfInputs, px: number, c: Criteria) {
   const fcf = td(html`${verdict(c.fcfPass, c.fcfNa)}${[...fcfLines, ...(inp.fcfNotes ?? [])].map((n) => why(n))}`, false, 'minw');
   const moatKey = (inp.moat === undefined ? 'unavailable' : inp.moat in T.moat ? inp.moat : 'none') as keyof typeof T.moat;
   const growthKey = (inp.growth === undefined ? 'unavailable' : inp.growth in T.growth ? inp.growth : 'na') as keyof typeof T.growth;
-  const moat = td(html`${tag(MOAT_TONE[moatKey] as string, T.moat[moatKey])}${why(inp.moatTxt || '')}`);
-  const growth = td(html`${tag(GROWTH_TONE[growthKey] as string, T.growth[growthKey])}${why(inp.growthTxt || '')}${inp.track ? why(T.track(inp.track)) : ''}`);
+  const draftTag = inp.draft ? html`<span class="tag c-loss">${he.draft.tag}</span> ` : '';
+  const moat = td(html`${draftTag}${tag(MOAT_TONE[moatKey] as string, T.moat[moatKey])}${why(inp.moatTxt || '')}`);
+  const growth = td(html`${draftTag}${tag(GROWTH_TONE[growthKey] as string, T.growth[growthKey])}${why(inp.growthTxt || '')}${inp.track ? why(T.track(inp.track)) : ''}`);
   return { pe, fcf, moat, growth };
 }
 

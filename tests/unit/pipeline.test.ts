@@ -217,7 +217,7 @@ describe('validateData', () => {
     await run(fakes().P);
     writeFileSync(join(dir, 'history/AAA.json'), '{nope');
     mkdirSync(join(dir, 'analysis'), { recursive: true });
-    writeFileSync(join(dir, 'analysis/AAA.json'), JSON.stringify({ schema: 1, symbol: 'ZZZ', status: 'approved', asof: '2026-10-23' }));
+    writeFileSync(join(dir, 'analysis/AAA.json'), JSON.stringify({ schema: 1, symbol: 'ZZZ', status: 'approved', asof: '2026-10-23', reviewedBy: 'Owner', reviewedAt: '2026-10-23' }));
     const m = read('market.json');
     m.tickers.BBB.has = ['fundamentals'];
     writeFileSync(join(dir, 'market.json'), JSON.stringify(m));

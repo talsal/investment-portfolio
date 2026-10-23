@@ -25,7 +25,7 @@ export function packToFiles(pack: Any): Record<string, unknown> {
       for (const k of ['epsT', 'epsF', 'epsN', 'fcfPs', 'fcfTotal', 'fcfTrend', 'roe', 'bv', 'earnOk']) if (bf[k] !== undefined) inputs[k] = bf[k];
       has.push('fundamentals', 'analysis');
       files[`fundamentals/${sym}.json`] = { schema: 1, symbol: sym, source: 'test', asof: asof ?? '2026-10-22', fetchedAt: generatedAt, inputs, ...(t.base ? { base: t.base } : {}) };
-      const a: Any = { schema: 1, symbol: sym, status: 'approved', asof: asof ?? '2026-10-22' };
+      const a: Any = { schema: 1, symbol: sym, status: 'approved', asof: asof ?? '2026-10-22', reviewedBy: 'Test Reviewer', reviewedAt: asof ?? '2026-10-22' };
       for (const k of ['moat', 'moatTxt', 'growth', 'growthTxt', 'track', 'cyclical', 'next', 'pen', 'peNotes', 'fcfNotes']) if (bf[k] !== undefined) a[k] = bf[k];
       files[`analysis/${sym}.json`] = a;
     }

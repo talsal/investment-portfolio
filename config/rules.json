@@ -99,7 +99,8 @@
       "calendar": 10,
       "cpi": 50,
       "fundamentals": 120,
-      "history": 7
+      "history": 7,
+      "analysis": 200
     }
   },
   "history": {

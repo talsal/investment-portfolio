@@ -36,6 +36,8 @@ export interface BfInputs {
   roe?: number; bv?: number; earnOk?: boolean; pen?: string; peNotes?: string[]; fcfNotes?: string[];
   moat?: MoatState; moatTxt?: string; growth?: GrowthState; growthTxt?: string; track?: string;
   cyclical?: boolean; next?: string;
+  /** True when the qualitative fields come from an unapproved machine draft (preview mode only). */
+  draft?: boolean;
 }
 export interface MarketEvent { d: string | null; what: string; st?: EventStatus }
 export interface TickerPack {
@@ -63,6 +65,10 @@ export interface MarketMeta {
   groups: Partial<Record<'fx' | 'quotes' | 'benchmark' | 'calendar' | 'cpi', { state: 'ok' | 'stale' | 'unavailable'; asof: string | null; fetchedAt: string | null; source: string; note?: string }>>;
   /** Per-ticker date of the fundamentals used (YYYY-MM-DD). */
   fundamentalsAsof: Record<string, string>;
+  /** Per-ticker date a human approved the qualitative analysis. */
+  analysisAsof: Record<string, string>;
+  /** Tickers whose unapproved draft is being previewed. */
+  draftsShown: string[];
   /** Tickers whose latest price is carried over from an earlier run. */
   stalePrices: string[];
   cpiAsof: string | null;

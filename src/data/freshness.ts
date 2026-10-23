@@ -1,7 +1,7 @@
 import type { MarketData } from '../calc/types';
 import { RULES } from '../config/rules';
 
-export type FreshId = 'fx' | 'quotes' | 'benchmark' | 'calendar' | 'cpi' | 'fundamentals' | 'history';
+export type FreshId = 'fx' | 'quotes' | 'benchmark' | 'calendar' | 'cpi' | 'fundamentals' | 'history' | 'analysis';
 export type FreshLevel = 'ok' | 'stale' | 'unavailable' | 'missing';
 
 export interface FreshnessItem {
@@ -50,6 +50,8 @@ export function freshness(M: MarketData, now: Date, heldSymbols: string[] = []):
   if (cpi || meta.cpiAsof) out.push(item('cpi', now, cpi?.state ?? null, meta.cpiAsof ?? cpi?.asof ?? null, cpi?.source ?? null, cpi?.note));
   const dates = heldSymbols.map((s) => meta.fundamentalsAsof[s]).filter((d): d is string => !!d).sort();
   if (dates.length) out.push(item('fundamentals', now, null, dates[0] as string, null));
+  const reviewed = heldSymbols.map((s) => meta.analysisAsof?.[s]).filter((d): d is string => !!d).sort();
+  if (reviewed.length) out.push(item('analysis', now, null, reviewed[0] as string, null));
   return out;
 }
 

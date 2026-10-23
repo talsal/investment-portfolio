@@ -13,6 +13,8 @@ export interface OpenOpts extends Scenario {
   mode?: 'browser' | 'file' | 'none';
   /** Overrides the served data files (path relative to data/ -> JSON). Default: derived from `pack`. */
   files?: Record<string, unknown>;
+  /** Page to open (default '/'), e.g. '/?drafts=1'. */
+  url?: string;
   /** Runs before the app loads (e.g. to install browser API fakes). */
   beforeLoad?: (page: Page) => Promise<void>;
 }
@@ -42,7 +44,7 @@ export async function openApp(browser: Browser, o: OpenOpts): Promise<{ page: Pa
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(String(e)));
   page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
-  await page.goto('/');
+  await page.goto(o.url ?? '/');
   await page.waitForLoadState('networkidle');
   await page.waitForSelector('#outMain, #outEmpty', { state: 'attached' });
   return { page, errors, close: () => ctx.close() };
