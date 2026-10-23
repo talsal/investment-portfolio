@@ -111,7 +111,7 @@ export function renderPie({ P, C, now }: Ctx): void {
     if (ann !== null) svgText(svg, cx, cy + 60, `center-label tr-ann ${ann >= 0 ? 'pos' : 'neg'}`, he.trade.centerAnn(sgnMinus(ann)));
     setHtml(sum, rich(he.trade.summary({
       cum: iso(sgnMinus(cum)), gain: pos, amt: fmtNis(Math.abs(cur - inv)), inv: fmtNis(inv), ann: ann !== null ? iso(sgnMinus(ann)) : null,
-      days: Math.round(avgDays), minDays: RULES.annualization.minHoldingDays,
+      days: Math.round(avgDays), minDays: RULES.annualization.minHoldingDays, mmfIn: C.mmfInPl,
     })));
   }
 

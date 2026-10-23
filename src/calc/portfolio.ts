@@ -50,6 +50,8 @@ export interface Computed {
   cash: number;
   mmf: number;
   total: number;
+  /** True when a money-market cost was entered, so the money-market fund is part of the profit figures. */
+  mmfInPl: boolean;
   /** Bond value in ILS, using only prices the user entered (no pack fallback), as the reference does. */
   bond: number;
 }
@@ -74,7 +76,7 @@ export function compute(P: Profile, M: MarketData): Computed {
   const C: Computed = {
     fx, fxManual: manual, items: [], tradeTotal: 0, eqTrade: 0, gemelTotal: 0, hishTotal: 0, eqFund: 0, unknownFunds: 0,
     held: [], pl: { tr: { inv: 0, cur: 0 }, gemel: { inv: 0, cur: 0 }, hish: { inv: 0, cur: 0 } },
-    plMissing: 0, cash: 0, mmf: 0, total: 0, bond: 0,
+    plMissing: 0, cash: 0, mmf: 0, total: 0, bond: 0, mmfInPl: false,
   };
   for (const r of P.rows) {
     const pk = lookupPack(M, r.t);
@@ -100,7 +102,11 @@ export function compute(P: Profile, M: MarketData): Computed {
   const cu = nz(P.cashUsd) * fx, cn = nz(P.cashNis), mm = nz(P.mmf);
   C.cash = cu + cn;
   C.mmf = mm;
-  if (mm > 0) C.items.push({ kind: 'mmf', name: '', ticker: 'MMF', valNis: mm, usd: mm / fx, gain: null, gainNis: null, costNis: null, px: 0, cur: '', ty: 'other' });
+  const mmCost = nz(P.mmfCost);
+  if (mm > 0) {
+    C.items.push({ kind: 'mmf', name: '', ticker: 'MMF', valNis: mm, usd: mm / fx, gain: mmCost > 0 ? ((mm - mmCost) / mmCost) * 100 : null, gainNis: mmCost > 0 ? mm - mmCost : null, costNis: mmCost > 0 ? mmCost : null, px: 0, cur: '', ty: 'other' });
+    if (mmCost > 0) { C.pl.tr.inv += mmCost; C.pl.tr.cur += mm; C.mmfInPl = true; }
+  }
   if (cu + cn > 0) C.items.push({ kind: 'cash', name: '', ticker: 'CASH', valNis: cu + cn, usd: (cu + cn) / fx, gain: null, gainNis: null, costNis: null, px: 0, cur: '', ty: 'other' });
   C.tradeTotal += cu + cn + mm;
   for (const g of ['gemel', 'hish'] as const) {

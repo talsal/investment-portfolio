@@ -34,7 +34,7 @@ export function renderProfitTotal({ C }: Ctx): void {
     const g = x.cur - x.inv, p = (g / x.inv) * 100;
     return tr([td(he.pl.part[x.key]), td(fmtNis(x.inv), true), td(fmtNis(x.cur), true), td(colored(g, sgnNis(g), 'b6'), true), td(colored(p, sgn(p), 'b6'), true)]);
   })));
-  $('plNote').textContent = he.pl.foot(C.plMissing);
+  $('plNote').textContent = he.pl.foot(C.plMissing, C.mmfInPl);
 }
 
 export function renderEquity({ P, C }: Ctx): void {

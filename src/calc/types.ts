@@ -21,7 +21,9 @@ export interface Settings {
 }
 
 export interface Profile {
-  fx: string; cashUsd: string; cashNis: string; mmf: string; tradeRate: string; eqTarget: string;
+  fx: string; cashUsd: string; cashNis: string; mmf: string;
+  /** Optional: what was paid for the money-market units now held (₪). Enables its profit. */
+  mmfCost: string; tradeRate: string; eqTarget: string;
   rows: HoldingRow[]; gemel: FundRow[]; hish: FundRow[]; trades: TradeRow[];
   cf: CashFlowInput; settings: Settings;
   /** Tickers the user follows without holding them. */

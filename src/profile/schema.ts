@@ -13,7 +13,7 @@ export function blankCashFlow(): CashFlowInput {
 
 export function blankProfile(): Profile {
   return {
-    fx: '', cashUsd: '', cashNis: '', mmf: '', tradeRate: '', eqTarget: '',
+    fx: '', cashUsd: '', cashNis: '', mmf: '', mmfCost: '', tradeRate: '', eqTarget: '',
     rows: [], gemel: [], hish: [], trades: [], cf: blankCashFlow(), settings: { benchmarkDate: '', example: false },
     watchlist: [], withdrawal: { years: '', realRate: '' }, updatedAt: 0,
   };
@@ -31,7 +31,7 @@ export function sanitizeProfile(o: unknown): Profile {
   const P = blankProfile();
   if (!isObj(o)) return P;
   const L = RULES.limits;
-  P.fx = numStr(o.fx, 1, 10); P.cashUsd = numStr(o.cashUsd, 0, 1e10); P.cashNis = numStr(o.cashNis, 0, 1e10); P.mmf = numStr(o.mmf, 0, 1e10);
+  P.fx = numStr(o.fx, 1, 10); P.cashUsd = numStr(o.cashUsd, 0, 1e10); P.cashNis = numStr(o.cashNis, 0, 1e10); P.mmf = numStr(o.mmf, 0, 1e10); P.mmfCost = numStr(o.mmfCost, 0, 1e10);
   P.tradeRate = numStr(o.tradeRate, -100, 1000); P.eqTarget = numStr(o.eqTarget, 0, 100);
   for (const r of arr(o.rows, L.rows)) {
     if (!isObj(r)) continue;

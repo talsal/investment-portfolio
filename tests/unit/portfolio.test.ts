@@ -137,3 +137,25 @@ describe('totalProfit / annualEstimate / realReturn', () => {
     expect(realReturnPct(2, 2)).toBeCloseTo(0, 10);
   });
 });
+
+describe('money-market cost (optional)', () => {
+  it('without a cost: no profit for the fund and it stays out of the profit figures (reference behaviour)', () => {
+    const C = compute(profile({ mmf: '20000' }), market());
+    expect(C.items[0]?.gain).toBeNull();
+    expect(C.mmfInPl).toBe(false);
+    expect(totalProfit(C)).toBeNull();
+  });
+  it('with a cost: gain, percent and inclusion in the profit totals', () => {
+    const C = compute(profile({ mmf: '20000', mmfCost: '19000' }), market());
+    expect(C.items[0]?.gainNis).toBeCloseTo(1000, 6);
+    expect(C.items[0]?.gain).toBeCloseTo((1000 / 19000) * 100, 6);
+    expect(C.mmfInPl).toBe(true);
+    expect(totalProfit(C)).toMatchObject({ inv: 19000, cur: 20000 });
+  });
+  it('adds to the stocks in the trading-portfolio return', () => {
+    const P = profile({ fx: '1', rows: [row({ q: '10', k: '10', p: '12' })], mmf: '110', mmfCost: '100' });
+    const t = totalProfit(compute(P, market()))!;
+    expect(t.inv).toBe(200);
+    expect(t.cur).toBe(230);
+  });
+});

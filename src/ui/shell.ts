@@ -23,7 +23,7 @@ function editorCard(): Raw {
     <h2 class="card-h">${E.tradeH}</h2><p class="in-hint">${E.tradeHint}</p>
     <div id="inRows"></div><div class="in-btns"><button type="button" class="toggle-btn" id="addRow">${E.addRow}</button></div>
     <h2 class="card-h">${E.cashH}</h2>
-    <div class="in-grid">${top('cashUsd', E.cashUsd)}${top('cashNis', E.cashNis)}${top('mmf', E.mmf)}${top('tradeRate', E.tradeRate)}</div>
+    <div class="in-grid">${top('cashUsd', E.cashUsd)}${top('cashNis', E.cashNis)}${top('mmf', E.mmf)}${top('mmfCost', E.mmfCost)}${top('tradeRate', E.tradeRate)}</div>
     <h2 class="card-h">${E.gemelH}</h2><p class="in-hint">${E.gemelHint}</p>
     <div id="inGemel"></div><div class="in-btns"><button type="button" class="toggle-btn" id="addGemel">${E.addGemel}</button></div>
     <h2 class="card-h">${E.hishH}</h2>
