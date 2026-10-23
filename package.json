@@ -1,0 +1,27 @@
+{
+  "name": "investment-portfolio",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Hebrew RTL personal-wealth dashboard (static, GitHub Pages)",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:golden": "playwright test tests/golden",
+    "golden:update": "UPDATE_GOLDEN=1 playwright test tests/golden",
+    "golden:private": "GOLDEN_PRIVATE=1 playwright test tests/golden --grep @private",
+    "fixtures": "node scripts/make-fixtures.mjs",
+    "engine:sanitize": "node scripts/sanitize-engine.mjs",
+    "check:private": "node scripts/guard-personal-data.mjs",
+    "prepare": "git config core.hooksPath .githooks"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.64.1",
+    "@types/node": "^26.6.5",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.5",
+    "vitest": "^5.0.5"
+  }
+}

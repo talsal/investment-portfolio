@@ -1,0 +1,10 @@
+# Files that contain real personal financial data: never commit
+reference/
+sample-data/
+*.PRIVATE.*
+tests/golden/local/
+.env
+node_modules/
+dist/
+test-results/
+playwright-report/

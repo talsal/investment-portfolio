@@ -1,0 +1,1167 @@
+<title>תמונת מצב - תבנית</title>
+<style>
+  .viz-root {
+    color-scheme: light;
+    --surface-1:      #fcfcfb;
+    --surface-2:      #f3f2ef;
+    --text-primary:   #0b0b0b;
+    --text-secondary: #52514e;
+    --text-muted:     #83817a;
+    --border:         #e3e1db;
+
+    --series-1: #2a78d6; /* NICE   - blue    */
+    --series-2: #eb6834; /* PYPL   - orange  */
+    --series-3: #1baf7a; /* OXY    - aqua    */
+    --series-4: #eda100; /* RNR    - yellow  */
+    --series-5: #e87ba4; /* TGT    - magenta */
+    --series-6: #008300; /* KHC    - green   */
+    --series-7: #4a3aa7; /* ת"א 125 - violet */
+    --series-8: #e34948; /* קרן כספית - red  */
+    --series-9: #9c9b93; /* מזומן (נכס "אחר"/רזרבה) - אפור ניטרלי, לא מהפלטה הקטגורית */
+
+    --gain-color: #1e7e34; /* רווח - ירוק סטטוס, שמור ולא חלק מהפלטה הקטגורית */
+    --loss-color: #c62828; /* הפסד - אדום סטטוס, שמור ולא חלק מהפלטה הקטגורית */
+
+    max-width: 880px;
+    margin: 0 auto;
+    padding: 20px 16px 32px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+    color: var(--text-primary);
+    background: var(--surface-1);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .viz-root {
+      color-scheme: dark;
+      --surface-1:      #1a1a19;
+      --surface-2:      #232322;
+      --text-primary:   #ffffff;
+      --text-secondary: #c3c2b7;
+      --text-muted:     #918f85;
+      --border:         #34332f;
+
+      --series-1: #3987e5;
+      --series-2: #d95926;
+      --series-3: #199e70;
+      --series-4: #c98500;
+      --series-5: #d55181;
+      --series-6: #008300;
+      --series-7: #9085e9;
+      --series-8: #e66767;
+      --series-9: #86847a;
+      --gain-color: #4caf6d;
+      --loss-color: #ef5350;
+    }
+  }
+  :root[data-theme="dark"] .viz-root {
+    color-scheme: dark;
+    --surface-1:      #1a1a19;
+    --surface-2:      #232322;
+    --text-primary:   #ffffff;
+    --text-secondary: #c3c2b7;
+    --text-muted:     #918f85;
+    --border:         #34332f;
+
+    --series-1: #3987e5;
+    --series-2: #d95926;
+    --series-3: #199e70;
+    --series-4: #c98500;
+    --series-5: #d55181;
+    --series-6: #008300;
+    --series-7: #9085e9;
+    --series-8: #e66767;
+    --series-9: #86847a;
+    --gain-color: #4caf6d;
+    --loss-color: #ef5350;
+  }
+
+  body { background: var(--surface-1); margin: 0; }
+
+  .viz-root h1 { font-size: 19px; font-weight: 700; margin: 0 0 2px; }
+  .viz-root .subtitle { font-size: 13px; color: var(--text-secondary); margin: 0 0 20px; }
+
+  .chart-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 28px;
+    align-items: center;
+    justify-content: center;
+  }
+  .chart-wrap { position: relative; width: 320px; height: 320px; flex: 0 0 auto; }
+  .chart-wrap svg { width: 100%; height: 100%; overflow: visible; }
+
+  .slice { cursor: pointer; transition: transform 0.15s ease, opacity 0.15s ease; transform-origin: 160px 160px; }
+  .slice:hover, .slice.hover { transform: scale(1.035); }
+  .slice.dim { opacity: 0.45; }
+
+  .slice-label {
+    font-size: 12px;
+    font-weight: 700;
+    fill: #fff;
+    text-anchor: middle;
+    dominant-baseline: middle;
+    pointer-events: none;
+  }
+
+  .center-label { text-anchor: middle; pointer-events: none; }
+  .center-label.total-caption { font-size: 11px; fill: var(--text-muted); }
+  .center-label.total-usd { font-size: 22px; font-weight: 700; fill: var(--text-primary); }
+  .center-label.total-nis { font-size: 12px; fill: var(--text-secondary); }
+  .center-label.tr-cum, .center-label.tr-ann { font-size: 13px; font-weight: 700; }
+  .center-label.tr-cum.pos, .center-label.tr-ann.pos { fill: var(--gain-color); }
+  .center-label.tr-cum.neg, .center-label.tr-ann.neg { fill: var(--loss-color); }
+  .center-label.tr-lbl { font-size: 10.5px; fill: var(--text-muted); }
+
+  .tooltip {
+    position: fixed;
+    pointer-events: none;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 11px;
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: var(--text-primary);
+    box-shadow: 0 4px 14px rgba(0,0,0,0.16);
+    z-index: 20;
+    max-width: 220px;
+  }
+  .tooltip .t-name { font-weight: 700; display: flex; align-items: center; gap: 6px; }
+  .tooltip .t-swatch { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+  .tooltip .t-row { color: var(--text-secondary); }
+
+  .legend {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(160px, 1fr));
+    gap: 6px 18px;
+    flex: 1 1 260px;
+    min-width: 240px;
+  }
+  .legend li {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 4px;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+  .legend li:hover, .legend li.hover { background: var(--surface-2); }
+  .legend .swatch { width: 11px; height: 11px; border-radius: 3px; flex: 0 0 auto; }
+  .legend .lg-text { display: flex; flex-direction: column; min-width: 0; }
+  .legend .lg-name { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .legend .lg-sub { font-size: 11.5px; color: var(--text-secondary); }
+  .legend .lg-pct { margin-inline-start: auto; font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; display: flex; flex-direction: column; align-items: flex-end; }
+  .legend .lg-pct .lg-pct-l { font-size: 11px; font-weight: 500; color: var(--text-secondary); }
+  .lg-gain { font-size: 11.5px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .lg-gain.pos { color: var(--gain-color); }
+  .lg-gain.neg { color: var(--loss-color); }
+  .lg-gain.na { color: var(--text-muted); font-weight: 500; }
+  .lg-gain .approx-flag { font-weight: 500; color: var(--text-muted); }
+
+  .actions { margin-top: 18px; display: flex; gap: 10px; }
+  button.toggle-btn {
+    font-size: 12.5px;
+    padding: 7px 14px;
+    border-radius: 7px;
+    border: 1px solid var(--border);
+    background: var(--surface-2);
+    color: var(--text-primary);
+    cursor: pointer;
+  }
+  button.toggle-btn:hover { background: var(--border); }
+
+  table.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 14px;
+    font-size: 13px;
+  }
+  table.data-table th, table.data-table td {
+    text-align: start;
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--border);
+    font-variant-numeric: tabular-nums;
+  }
+  table.data-table th { color: var(--text-secondary); font-weight: 600; font-size: 12px; }
+  table.data-table td.num, table.data-table th.num { text-align: end; }
+  table.data-table tr.total-row td { font-weight: 700; border-top: 2px solid var(--border); border-bottom: none; }
+
+
+  .bf-wrap { overflow-x: auto; }
+  .bf-pass, .bf-fail { display: inline-block; font-weight: 700; font-size: 12px; white-space: nowrap; }
+  .bf-pass { color: var(--gain-color); }
+  .bf-fail { color: var(--loss-color); }
+  .bf-why { display: block; font-size: 11px; color: var(--text-muted); margin-top: 2px; font-weight: 400; }
+
+
+  .glossary dt { font-weight: 700; font-size: 13px; margin-top: 12px; }
+  .glossary dd { margin: 3px 0 0; font-size: 12.5px; color: var(--text-secondary); max-width: 640px; }
+
+  .rate-note { font-size: 11.5px; color: var(--text-muted); margin-top: 10px; }
+
+  .cf-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 16px; max-width: 640px; margin: 4px 0 6px; }
+  .cf-grid label { display: flex; flex-direction: column; gap: 4px; font-size: 12.5px; color: var(--text-secondary); }
+  .cf-grid input, .cf-grid select { font: inherit; font-size: 14px; padding: 7px 9px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface-1); color: var(--text-primary); font-variant-numeric: tabular-nums; min-width: 0; }
+  .cf-grid input:focus, .cf-grid select:focus { outline: 2px solid var(--series-7); outline-offset: 1px; }
+  .cf-sub { font-size: 13px; font-weight: 700; margin: 18px 0 4px; }
+  .cf-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin: 16px 0 6px; max-width: 700px; }
+  .cf-tile { background: var(--surface-2); border-radius: 8px; padding: 10px 12px; }
+  .cf-tile .k { font-size: 11.5px; color: var(--text-secondary); }
+  .cf-tile .v { font-size: 19px; font-weight: 700; font-variant-numeric: tabular-nums; margin-top: 2px; }
+  .cf-tile .s { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+  .cf-bars { max-width: 640px; margin-top: 6px; }
+  .cf-bar { display: grid; grid-template-columns: 150px 1fr 96px; gap: 8px; align-items: center; font-size: 12.5px; padding: 3px 0; }
+  .cf-bar .track { height: 10px; background: var(--surface-2); border-radius: 5px; overflow: hidden; }
+  .cf-bar .fill { height: 100%; background: var(--series-7); border-radius: 5px; }
+  .cf-bar .val { text-align: end; font-variant-numeric: tabular-nums; }
+  .cf-bar .val small { color: var(--text-muted); }
+  .cf-link { max-width: 640px; font-size: 12.5px; color: var(--text-secondary); background: var(--surface-2); border-radius: 8px; padding: 10px 12px; margin-top: 12px; }
+  @media (max-width: 520px) { .cf-grid { grid-template-columns: 1fr; } .cf-bar { grid-template-columns: 110px 1fr 84px; } }
+
+  .compare-section { margin-top: 30px; padding-top: 20px; border-top: 1px solid var(--border); }
+  .compare-section h2 { font-size: 15px; font-weight: 700; margin: 0 0 4px; }
+  .compare-section .compare-note { font-size: 12.5px; color: var(--text-secondary); margin: 0 0 14px; max-width: 640px; }
+  .compare-total { font-size: 13px; color: var(--text-secondary); margin: 0 0 12px; }
+  .compare-total .ct-usd { font-size: 20px; font-weight: 700; color: var(--text-primary); font-variant-numeric: tabular-nums; }
+  .compare-total .ct-nis { font-variant-numeric: tabular-nums; }
+  .compare-bar { display: flex; width: 100%; height: 30px; border-radius: 8px; overflow: hidden; gap: 2px; background: var(--surface-1); }
+  .compare-seg { height: 100%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; color: #fff; white-space: nowrap; }
+  .compare-legend { display: flex; flex-wrap: wrap; gap: 20px; margin-top: 12px; }
+  .compare-legend .cl-item { display: flex; align-items: flex-start; gap: 8px; font-size: 13px; }
+  .compare-legend .cl-swatch { width: 11px; height: 11px; border-radius: 3px; flex: 0 0 auto; margin-top: 4px; }
+  .compare-legend .cl-text { display: flex; flex-direction: column; gap: 2px; }
+  .compare-legend .cl-name { font-weight: 600; }
+  .compare-legend .cl-sub { color: var(--text-secondary); font-size: 12px; }
+
+  @media (max-width: 560px) {
+  }
+
+
+  .hs-modes { display: flex; gap: 8px; margin: 4px 0 10px; }
+  .hs-modes .toggle-btn[aria-pressed="true"] { font-weight: 700; border-color: var(--text-secondary); background: var(--surface-2); }
+  .hs-legend { display: flex; gap: 18px; flex-wrap: wrap; font-size: 12.5px; color: var(--text-secondary); margin: 10px 0 6px; }
+  .hs-legend .sw { display: inline-block; width: 22px; height: 0; border-top: 3px solid var(--series-7); vertical-align: middle; margin-inline-end: 6px; border-radius: 2px; }
+  .hs-legend .sw.spy { border-top: 2px dashed var(--text-secondary); }
+  .hs-chart { position: relative; direction: ltr; }
+  .hs-chart svg { width: 100%; height: auto; display: block; }
+  .hs-chart text { font-family: inherit; fill: var(--text-secondary); font-size: 11px; }
+  .hs-chart .hs-grid { stroke: var(--border); stroke-width: 1; }
+  .hs-chart .hs-base { stroke: var(--text-muted); stroke-width: 1; stroke-dasharray: 3 3; }
+  .hs-chart .hs-basket { fill: none; stroke: var(--series-7); stroke-width: 2.5; stroke-linejoin: round; stroke-linecap: round; }
+  .hs-chart .hs-spy { fill: none; stroke: var(--text-secondary); stroke-width: 2; stroke-dasharray: 6 4; stroke-linejoin: round; }
+  .hs-chart .hs-ring { stroke: var(--surface-1); stroke-width: 2; }
+  .hs-chart .hs-lbl-strong { fill: var(--text-primary); font-weight: 700; }
+  .hs-tip { position: absolute; top: 4px; pointer-events: none; background: var(--surface-2); border: 1px solid var(--border); border-radius: 6px; padding: 6px 9px; font-size: 12px; line-height: 1.5; color: var(--text-primary); white-space: nowrap; display: none; direction: rtl; text-align: right; z-index: 2; }
+  .hs-details { margin-top: 10px; }
+  .hs-details summary { cursor: pointer; font-size: 12.5px; color: var(--text-secondary); }
+  .hs-details .bf-wrap { max-height: 320px; overflow-y: auto; }
+  .hs-legend .sw.inv { border-top: 2px dotted var(--text-muted); }
+  .hs-chart .hs-invl { fill: none; stroke: var(--text-muted); stroke-width: 1.5; stroke-dasharray: 2 3; }
+  .ana-pending { font-size: 12.5px; color: var(--text-secondary); background: var(--surface-2); border-radius: 8px; padding: 10px 12px; margin-top: 18px; }
+  .in-row.t { grid-template-columns: 1.2fr 1fr 0.8fr 0.9fr 1fr auto; }
+  /* ---- פיילוט כללי: הזנת נתונים ---- */
+  .in-card { border: 1px solid var(--border); border-radius: 10px; background: var(--surface-2); padding: 14px; margin-top: 14px; }
+  .in-card > summary { cursor: pointer; font-size: 14.5px; font-weight: 700; }
+  .in-card h3 { font-size: 13.5px; margin: 18px 0 4px; }
+  .in-hint { font-size: 11.5px; color: var(--text-secondary); margin: 0 0 8px; max-width: 640px; }
+  .in-row { display: grid; grid-template-columns: 1.4fr 0.8fr 0.8fr 0.9fr repeat(3, minmax(0, 1fr)) auto; gap: 6px; align-items: end; padding: 8px 0; border-bottom: 1px solid var(--border); }
+  .in-row.g { grid-template-columns: 1.5fr 1fr 1fr 0.7fr 0.8fr auto; }
+  .in-f { display: flex; flex-direction: column; gap: 3px; font-size: 11px; color: var(--text-secondary); min-width: 0; }
+  .in-f input, .in-f select, .in-grid input { font: inherit; font-size: 13.5px; padding: 6px 7px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface-1); color: var(--text-primary); min-width: 0; width: 100%; box-sizing: border-box; }
+  .in-f input.n, .in-grid input.n { direction: ltr; text-align: right; }
+  .in-f input:focus-visible, .in-f select:focus-visible, .in-grid input:focus-visible, .in-card button:focus-visible, .in-card summary:focus-visible { outline: 2px solid var(--series-1); outline-offset: 1px; }
+  .in-x { font-size: 18px; line-height: 1; padding: 5px 10px; }
+  .in-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+  .in-btns { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; align-items: center; }
+  .in-status { font-size: 12px; color: var(--text-muted); }
+  .in-msg { font-size: 12.5px; margin-top: 8px; min-height: 18px; }
+  .in-msg.bad { color: var(--loss-color); }
+  .in-json { width: 100%; box-sizing: border-box; min-height: 110px; margin-top: 10px; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12px; direction: ltr; background: var(--surface-1); color: var(--text-primary); border: 1px solid var(--border); border-radius: 6px; padding: 8px; }
+  .empty-box { text-align: center; color: var(--text-secondary); font-size: 13.5px; padding: 28px 12px; border: 1px dashed var(--border); border-radius: 10px; margin-top: 18px; }
+  @media (max-width: 700px) {
+    .in-row, .in-row.g, .in-row.t { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .in-row .in-wide, .in-row.g .in-wide { grid-column: 1 / -1; }
+  }
+</style>
+
+<div class="viz-root" dir="rtl" lang="he">
+  <h1>תמונת מצב של ההון</h1>
+  <p class="subtitle" id="subtitle">מתחילים מאפס: מזינים את הנתונים שלך, והכלי מחשב ומציג את התמונה.</p>
+  <p class="rate-note" style="margin:-8px 0 16px"><b>דף פיילוט, מידע בלבד.</b> אין בדף המלצה לקנות, למכור או להחזיק נייר ערך, והוא אינו ייעוץ השקעות. כל הנתונים והחישובים מבוססים על מה שאתה מזין.</p>
+
+  <details class="in-card" id="inCard" open>
+    <summary>הנתונים שלי</summary>
+    <p class="in-hint" style="margin-top:8px">שום שדה לא מולא מראש. מה שתזין נשמר אוטומטית במכשיר הזה, ובצפייה מחוברת גם בשטח הפרטי שלך (מסתנכרן בין מכשירים). מחירים מעדכנים ידנית.</p>
+    <div class="in-grid" style="max-width:420px"><label class="in-f">שער דולר-שקל (ריק = 3.11)<input class="n" type="text" inputmode="decimal" autocomplete="off" data-top="fx" placeholder="3.11"></label></div>
+
+    <h3>תיק מסחר: מניות, קרנות ואג"ח</h3>
+    <p class="in-hint">לכל נייר: כמות, מחיר קנייה ממוצע ומחיר נוכחי (באותו מטבע שבחרת). אפשר להוסיף כמה שורות שרוצים.</p>
+    <div id="inRows"></div>
+    <div class="in-btns"><button type="button" class="toggle-btn" id="addRow">+ הוסף נייר ערך</button></div>
+
+    <h3>מזומן וקרן כספית</h3>
+    <div class="in-grid">
+      <label class="in-f">מזומן דולרי ($)<input class="n" type="text" inputmode="decimal" autocomplete="off" data-top="cashUsd"></label>
+      <label class="in-f">מזומן שקלי (₪)<input class="n" type="text" inputmode="decimal" autocomplete="off" data-top="cashNis"></label>
+      <label class="in-f">קרן כספית, שווי נוכחי (₪)<input class="n" type="text" inputmode="decimal" autocomplete="off" data-top="mmf"></label>
+      <label class="in-f">תשואה שנתית משוערת לתיק המסחר (%, אופציונלי)<input class="n" type="text" inputmode="decimal" autocomplete="off" data-top="tradeRate"></label>
+    </div>
+
+    <h3>גמל להשקעה</h3>
+    <p class="in-hint">שם, יתרה בשקלים, סך מה שהופקד עד היום (לחישוב הרווח), אחוז החשיפה למניות בקופה ותשואה שנתית משוערת. כל מה שאחרי היתרה אופציונלי.</p>
+    <div id="inGemel"></div>
+    <div class="in-btns"><button type="button" class="toggle-btn" id="addGemel">+ הוסף קופת גמל</button></div>
+
+    <h3>קרנות השתלמות</h3>
+    <div id="inHish"></div>
+    <div class="in-btns"><button type="button" class="toggle-btn" id="addHish">+ הוסף קרן השתלמות</button></div>
+
+    <h3>יעד חלוקה</h3>
+    <div class="in-grid" style="max-width:420px"><label class="in-f">יעד אחוז מניות מכלל ההון (אופציונלי)<input class="n" type="text" inputmode="decimal" autocomplete="off" data-top="eqTarget" placeholder="למשל 75"></label></div>
+
+    <h3>קניות ומכירות (אופציונלי, לגרף ההשוואה מול S&amp;P 500)</h3>
+    <p class="in-hint">לכל פעולה: תאריך, סימול, קנייה או מכירה, כמות ומחיר בדולרים. הגרף מופיע למניות שיש להן נתוני מחיר בדף.</p>
+    <div id="inTrades"></div>
+    <div class="in-btns"><button type="button" class="toggle-btn" id="addTrade">+ הוסף פעולה</button></div>
+
+    <h3>גיבוי וייבוא</h3>
+    <p class="in-hint">ייצוא שומר את כל הנתונים שלך לקובץ. ייבוא מחליף את הנתונים הנוכחיים בנתונים מקובץ גיבוי.</p>
+    <div class="in-btns">
+      <button type="button" class="toggle-btn" id="btnExport">ייצוא גיבוי</button>
+      <button type="button" class="toggle-btn" id="btnImport">ייבוא מקובץ</button>
+      <button type="button" class="toggle-btn" id="btnConfirm" hidden>אשר ייבוא</button>
+      <button type="button" class="toggle-btn" id="btnReset">איפוס כל הנתונים</button>
+      <input type="file" id="fileIn" accept=".json,application/json" hidden>
+      <span class="in-status" id="inStatus" role="status"></span>
+    </div>
+    <textarea class="in-json" id="inJson" hidden readonly aria-label="נתוני גיבוי"></textarea>
+    <p class="in-msg" id="inMsg" role="status"></p>
+  </details>
+
+  <div id="outEmpty" class="empty-box">עוד אין נתונים. הוסף למעלה נייר ערך, מזומן, גמל או קרן השתלמות, והתמונה תופיע כאן.</div>
+
+  <div id="outMain" hidden>
+    <div class="compare-section" style="margin-top:22px;border-top:none;padding-top:0">
+      <h2>סך כל ההון</h2>
+      <p class="compare-total"><span class="ct-usd" id="totUsd"></span> · <span class="ct-nis" id="totNis"></span></p>
+      <div class="compare-bar" id="splitBar" role="img" aria-label="חלוקת ההון לפי חשבון"></div>
+      <div class="compare-legend" id="splitLegend"></div>
+    </div>
+
+    <div class="compare-section" id="plSection">
+      <h2>רווח כולל</h2>
+      <p class="compare-note">ההפרש בין השווי הנוכחי לבין מה שהושקע או הופקד, לפני מס ולפני דיבידנדים. נספרים רק חלקים שהזנת להם מחיר קנייה (בתיק המסחר) או סכום שהופקד (בגמל ובהשתלמות).</p>
+      <div class="cf-tiles" id="plTiles"></div>
+      <div class="bf-wrap" id="plTable"></div>
+      <p class="rate-note" id="plNote"></p>
+    </div>
+
+    <div class="compare-section" id="trSection">
+      <h2>תיק המסחר</h2>
+      <div class="chart-row">
+        <div class="chart-wrap"><svg id="pie" viewBox="0 0 320 320" role="img" aria-label="תרשים עוגה של תיק המסחר"></svg></div>
+        <ul class="legend" id="legend"></ul>
+      </div>
+      <div class="actions"><button class="toggle-btn" id="toggleTable" type="button" aria-expanded="false">הצג כטבלה</button></div>
+      <div id="tableView" class="bf-wrap" hidden></div>
+      <p class="rate-note" id="trSummary"></p>
+    </div>
+
+    <div class="compare-section" id="eqSection">
+      <h2>כמה מההון במניות</h2>
+      <p class="compare-note">קרנות ההשתלמות והגמל נספרות לפי אחוז החשיפה למניות שהזנת. קופה בלי אחוז נספרת כלא-מניות.</p>
+      <div class="cf-tiles" id="eqTiles"></div>
+      <p class="rate-note" id="eqNote"></p>
+    </div>
+
+    <div class="compare-section" id="annSection">
+      <h2>רווח שנתי וחודשי משוער</h2>
+      <p class="compare-note">לפי התשואות השנתיות שהזנת לכל חלק. זה חישוב על ההנחות שלך, ולא תחזית.</p>
+      <div class="cf-tiles" id="annTiles"></div>
+      <div class="bf-wrap" id="annTable"></div>
+      <p class="rate-note" id="annNote"></p>
+    </div>
+  </div>
+
+  <h2 id="anaTitle" hidden style="font-size:17px;margin:34px 0 0;padding-top:18px;border-top:2px solid var(--border)">ניתוח המניות שלך</h2>
+  <div class="ana-pending" id="anaPending" hidden></div>
+
+  <div class="compare-section" id="bfSection" hidden>
+    <h2>בדיקת קריטריונים של באפט - עובר / לא עובר</h2>
+    <p class="compare-note">ארבעה קריטריונים נספרים בציון, ו"עובר" רק כשהקריטריון מתקיים באופן מלא (מצב חלקי נספר כ"לא עובר"): <b>מכפיל רווח (P/E)</b> זול על רווח יציב; <b>FCF</b> עם תשואה גבוהה (כ-8% ומעלה) ומגמה שאינה קורסת; <b>חפיר (Moat)</b> עובר אם ההערכה היא "אין בעיה"; <b>צמיחה</b> עוברת אם מאיצה. <b>החזקה:</b> לא דורשת ציון מלא. דגלים אדומים: חפיר בבעיה, צמיחה שלילית, FCF בירידה. אין דגלים: להמשיך להחזיק. דגל אחד: להחזיק ולבדוק. שני דגלים ומעלה: לשקול מחדש. סימנים צהובים הם רק "ולעקוב". עמודת הרווח הנוכחי היא מעלות הקנייה שהזנת.</p>
+    <div class="bf-wrap" id="bfTable"></div>
+    <h3 style="font-size:13px;margin:18px 0 0;font-weight:700">נתוני בסיס לחפיר ולצמיחה (שנתי, 4 שנים)</h3>
+    <div class="bf-wrap" id="bfBase"></div>
+    <p class="rate-note" id="bfNote"></p>
+  </div>
+
+  <div class="compare-section" id="wlSection" hidden>
+    <h2>מניות למעקב - לא בתיק</h2>
+    <p class="compare-note">מניות שנבדקות לפי אותם ארבעה קריטריונים, בלי להיות בתיק. המחיר, המכפיל ותשואת ה-FCF מחושבים מהמחיר העדכני. הנתונים הבסיסיים מתעדכנים ידנית אחרי כל דוח רבעוני. הכנסה לרשימה אינה המלצה לקנות.</p>
+    <div class="bf-wrap" id="wlTable"></div>
+        <p class="rate-note" id="wlNote"></p>
+  </div>
+
+  <div class="compare-section" id="divSection" hidden>
+    <h2>דיבידנדים</h2>
+    <p class="compare-note">הצפי השנתי מניח שהדיבידנד לכל מניה ממשיך כפי ששולם לאחרונה, על הכמויות שהזנת (ברוטו, לפני מס).</p>
+    <div id="divTable"></div>
+    <p class="rate-note" id="divNote"></p>
+  </div>
+
+  <div class="compare-section" id="bmSection" hidden>
+    <h2>השוואה מול המדד - המניות שלך מול S&amp;P 500</h2>
+    <p class="compare-note">הכלי מחשב כמה שווים המניות שלך בכמויות הנוכחיות מול נקודת בסיס, ומשווה לשינוי של S&amp;P 500 (דרך הקרן SPY) באותה תקופה. מדובר בשינוי מחיר בלבד, בלי דיבידנדים. תקופה קצרה אינה הוכחה.</p>
+    <p class="compare-total">המניות: <span id="bmBasket"></span> · S&amp;P 500: <span id="bmSpy"></span> · הפרש: <span id="bmDiff"></span></p>
+    <div class="bf-wrap" id="bmTable"></div>
+    <p class="rate-note" id="bmNote"></p>
+  </div>
+
+  <div class="compare-section" id="hsSection" hidden>
+    <h2>התקדמות המניות - מול S&amp;P 500</h2>
+    <p class="compare-note">הגרף בנוי מהקניות והמכירות שהזנת, ומשווה את השווי בפועל למה שהיה קורה אילו אותם סכומים, באותם תאריכים, היו מושקעים ב-S&amp;P 500. העבר את העכבר (או הקש) על הגרף כדי לראות נקודה מסוימת.</p>
+    <div class="hs-modes"><button class="toggle-btn" id="hsBtnIls" type="button" aria-pressed="true">בשקלים</button><button class="toggle-btn" id="hsBtnUsd" type="button" aria-pressed="false">בדולרים</button></div>
+    <p class="compare-total" id="hsSummary"></p>
+    <div class="hs-legend"><span><i class="sw"></i>שווי המניות בפועל</span><span><i class="sw spy"></i>אותם סכומים ב-S&amp;P 500</span><span><i class="sw inv"></i>הושקע נטו</span></div>
+    <div class="hs-chart" id="hsChart"></div>
+    <p class="rate-note" id="hsGap"></p>
+    <details class="hs-details"><summary>הצג כטבלה</summary><div class="bf-wrap" id="hsTable"></div></details>
+    <details class="hs-details"><summary>הפעולות שנכללו בגרף</summary><div class="bf-wrap" id="hsTrades"></div></details>
+    <p class="rate-note" id="hsNote"></p>
+  </div>
+
+  <div class="compare-section" id="evSection" hidden>
+    <h2>לוח אירועים - דוחות רבעוניים</h2>
+    <p class="compare-note">תאריכי הדוחות של המניות בתיק. מסומנים תאריכים שאושרו על ידי החברה ותאריכים משוערים.</p>
+    <div class="bf-wrap" id="evTable"></div>
+    <p class="rate-note" id="evNote"></p>
+  </div>
+
+  <div class="compare-section" id="cfSection">
+    <h2>הכנסות והוצאות בעו"ש - כמה נשאר להשקעה</h2>
+    <p class="compare-note">מלא סיכום של חודש רגיל (בשקלים), והכלי יחשב כמה נשאר להשקעה, כמה חודשים של הוצאות מכסה הכסף הנזיל שלך, ואיך זה קשור להחלטה על האג"ח.</p>
+    <div class="cf-grid" id="cfInputs"></div>
+    <div class="cf-tiles" id="cfTiles"></div>
+    <h3 class="cf-sub">הוצאות לפי קטגוריה</h3>
+    <div class="cf-bars" id="cfBars"></div>
+    <div class="cf-link" id="cfLink"></div>
+    <p class="rate-note" id="cfNote"></p>
+    <button type="button" class="toggle-btn" id="cfClear" style="margin-top:8px">נקה את ההכנסות וההוצאות</button>
+  </div>
+
+  <div class="compare-section" id="glossarySection">
+    <h2>מושגים</h2>
+    <dl class="glossary">
+      <dt>מכפיל רווח (P/E - Price to Earnings)</dt>
+      <dd>כמה שנים לוקח לרווח של החברה להחזיר את מחיר המניה. ככל שהוא נמוך יותר המניה זולה יותר, בתנאי שהרווח יציב.</dd>
+      <dt>P/E עוקב</dt>
+      <dd>המחיר חלקי הרווח של 12 החודשים האחרונים. זה רווח שכבר התרחש, והוא המכפיל שמוצג בדרך כלל באפליקציות כמו איביאי.</dd>
+      <dt>P/E עתידי</dt>
+      <dd>המחיר חלקי הרווח שהאנליסטים מצפים לו ב-12 החודשים הקרובים. זו הערכה ולא נתון, אבל היא מתייחסת למה שעוד יקרה.</dd>
+      <dt>FCF - Free Cash Flow (תזרים מזומנים חופשי)</dt>
+      <dd>הכסף שנשאר לחברה אחרי כל ההוצאות וההשקעות הנדרשות, ואפשר לחלק, לקנות בו מניות או להחזיר חוב. תשואת FCF היא ה-FCF למניה חלקי מחיר המניה.</dd>
+      <dt>חפיר - Moat</dt>
+      <dd>יתרון תחרותי מתמשך שמגן על הרווחים של החברה ממתחרים, כמו החפיר סביב טירה. המונח של וורן באפט.</dd>
+      <dt>תשואת FCF</dt>
+      <dd>ה-FCF למניה חלקי מחיר המניה. מראה כמה אחוז מהמחיר חוזר אליך בכל שנה כמזומן, ומשווים אותו למה שמקבלים בלי סיכון (למשל קרן כספית).</dd>
+      <dt>חפיר צר / רחב</dt>
+      <dd>צר הוא יתרון תחרותי אמיתי אבל לא בלתי ניתן לפריצה, רחב הוא יתרון חזק ונדיר שנשמר שנים. החץ ↑ אומר שהחפיר מתחזק, ↔ יציב, ↓ נשחק.</dd>
+      <dt>ROIC - Return on Invested Capital</dt>
+      <dd>כמה רווח החברה מרוויחה על כל דולר שהושקע בה. ROIC מעל עלות ההון (כ-10%) אומר שהיא יוצרת ערך, ושמירה על ROIC גבוה לאורך שנים היא סימן לחפיר.</dd>
+      <dt>צמיחה - Growth</dt>
+      <dd>כמה גדלו ההכנסות והתזרים של החברה, ובאיזה כיוון: מאיצה, יציבה או מאטה. צמיחה אורגנית באה מהעסק עצמו, ולא מרכישת חברות אחרות.</dd>
+      <dt>מחזורי</dt>
+      <dd>חברה שהרווחים שלה עולים ויורדים בגלים בהתאם למצב בענף (למשל נפט או ביטוח אסונות), ולא בגלל שינוי באיכות העסק. אצל חברה כזו מסתכלים על ממוצע כמה שנים.</dd>
+      <dt>החזקה (לפי הכללים)</dt>
+      <dd>דגלים אדומים: חפיר בבעיה, צמיחה שלילית, FCF בירידה. אין דגלים: להמשיך להחזיק. דגל אחד: להחזיק ולבדוק. שניים ומעלה: לשקול מחדש.</dd>
+      <dt>עיבוי (לפי הכללים)</dt>
+      <dd>מניה מועמדת לעיבוי רק אם ה-P/E וה-FCF עוברים, החפיר ללא בעיה והצמיחה אינה שלילית. זו בדיקה ברמת המניה בלבד, ולא הוראת קנייה.</dd>
+    </dl>
+  </div>
+
+  <div id="tooltip" class="tooltip" hidden></div>
+</div>
+
+<script type="application/json" id="marketData">{}</script>
+<script>
+(function () {
+  var KEY = 'pilot_profile_v2', DOC = 'portfolio_v2', FX_DEF = 3.11;
+  var CF_CATS = [['rent', 'דיור (שכירות / משכנתא / ארנונה)'], ['food', 'סופר ואוכל בבית'], ['out', 'מסעדות ובילויים'], ['car', 'רכב ותחבורה'], ['bills', 'חשבונות וביטוחים'], ['kids', 'ילדים וחינוך'], ['health', 'בריאות'], ['other', 'אחר']];
+  var TOP = ['fx', 'cashUsd', 'cashNis', 'mmf', 'tradeRate', 'eqTarget'];
+  var TYPES = { eq: 'מניות', bond: 'אג"ח', other: 'אחר' };
+
+  var TICKER_NAMES = {
+    AAPL: 'אפל', MSFT: 'מיקרוסופט', GOOGL: 'אלפבית (גוגל)', GOOG: 'אלפבית (גוגל)', AMZN: 'אמזון', META: 'מטא (פייסבוק)', TSLA: 'טסלה', NVDA: 'אנבידיה', AMD: 'AMD', INTC: 'אינטל',
+    NFLX: 'נטפליקס', ADBE: 'אדובי', CRM: 'סיילספורס', ORCL: 'אורקל', IBM: 'IBM', CSCO: 'סיסקו', QCOM: 'קוואלקום', AVGO: 'ברודקום', TXN: 'טקסס אינסטרומנטס', MU: 'מיקרון', ASML: 'ASML', TSM: 'TSMC',
+    PYPL: 'פייפאל', V: 'ויזה', MA: 'מאסטרקארד', JPM: 'ג\'יי פי מורגן', BAC: 'בנק אוף אמריקה', WFC: 'וולס פארגו', C: 'סיטיגרופ', GS: 'גולדמן סאקס', MS: 'מורגן סטנלי', 'BRK.B': 'ברקשייר האת\'ווי', BRKB: 'ברקשייר האת\'ווי',
+    KO: 'קוקה קולה', PEP: 'פפסיקו', MCD: 'מקדונלדס', SBUX: 'סטארבקס', NKE: 'נייקי', DIS: 'דיסני', WMT: 'וולמארט', COST: 'קוסטקו', TGT: 'טארגט', HD: 'הום דיפו', LOW: 'לואס', PG: 'פרוקטר אנד גמבל', KHC: 'קרפט היינץ', MDLZ: 'מונדלז',
+    JNJ: 'ג\'ונסון אנד ג\'ונסון', PFE: 'פייזר', MRK: 'מרק', ABBV: 'אבווי', LLY: 'אלי לילי', UNH: 'יונייטד הלת\'', MRNA: 'מודרנה', TMO: 'תרמו פישר', ABT: 'אבוט',
+    XOM: 'אקסון מוביל', CVX: 'שברון', OXY: 'אוקסידנטל פטרוליום', COP: 'קונוקופיליפס', SLB: 'שלומברגר', BA: 'בואינג', LMT: 'לוקהיד מרטין', GE: 'ג\'נרל אלקטריק', CAT: 'קטרפילר', MMM: '3M', DE: 'דיר', UPS: 'UPS', FDX: 'פדקס',
+    T: 'AT&T', VZ: 'וריזון', TMUS: 'T-Mobile', UBER: 'אובר', ABNB: 'איירבנב', SHOP: 'שופיפיי', COIN: 'קוינבייס', PLTR: 'פלנטיר', SNOW: 'סנופלייק', ZM: 'זום', SPOT: 'ספוטיפיי', F: 'פורד', GM: 'ג\'נרל מוטורס', RIVN: 'ריביאן',
+    RNR: 'רנסאנס רי', NICE: 'נייס', TEVA: 'טבע', CHKP: 'צ\'ק פוינט', CYBR: 'סייברארק', WIX: 'וויקס', MNDY: 'מאנדיי', ESLT: 'אלביט מערכות', ICL: 'איי סי אל', NVMI: 'נובה', GLBE: 'גלובל-אי', FVRR: 'פייבר', SEDG: 'סולאראדג\'', ODD: 'אודד',
+    '1215771': 'אי.בי.אי. סל (4A) ת"א-ביטוח', '1197698': 'תכלית סל (40) ת"א-ביטוח',
+    DELL: 'דל טכנולוגיות', U: 'יוניטי', TTD: 'דה טרייד דסק', ROKU: 'רוקו', SNAP: 'סנאפ', PINS: 'פינטרסט', TWLO: 'טוויליו', DDOG: 'דאטאדוג', NET: 'קלאודפלייר', CRWD: 'קראודסטרייק', PANW: 'פאלו אלטו', ZS: 'זיסקלר', OKTA: 'אוקטה', DOCU: 'דוקוסיין', HUBS: 'האבספוט', NOW: 'סרוויסנאו', INTU: 'אינטואיט', ADSK: 'אוטודסק', ANET: 'ארישטה', SMCI: 'סופר מיקרו', ARM: 'ARM',
+    SPY: 'קרן SPDR על S&P 500', VOO: 'קרן ואנגארד S&P 500', IVV: 'קרן iShares על S&P 500', VTI: 'קרן ואנגארד שוק המניות האמריקאי', QQQ: 'קרן אינבסקו נאסד"ק 100', VT: 'קרן ואנגארד עולמית', VXUS: 'קרן ואנגארד מניות מחוץ לארה"ב',
+    SCHD: 'קרן שואב דיבידנד ארה"ב', VYM: 'קרן ואנגארד דיבידנד גבוה', IWM: 'קרן ראסל 2000', DIA: 'קרן דאו ג\'ונס', EFA: 'קרן שווקים מפותחים', EEM: 'קרן שווקים מתעוררים', SMH: 'קרן שבבים', SOXX: 'קרן שבבים', ARKK: 'קרן ARK חדשנות',
+    BND: 'קרן אג"ח כללי ארה"ב (ואנגארד)', AGG: 'קרן אג"ח כללי ארה"ב (iShares)', TLT: 'קרן אג"ח ממשלתי ארוך', IEF: 'קרן אג"ח ממשלתי בינוני', SHY: 'קרן אג"ח ממשלתי קצר', LQD: 'קרן אג"ח קונצרני', HYG: 'קרן אג"ח תשואה גבוהה',
+    GLD: 'קרן זהב', IAU: 'קרן זהב', SLV: 'קרן כסף', VNQ: 'קרן נדל"ן ארה"ב', BTC: 'ביטקוין', IBIT: 'קרן ביטקוין (iShares)'
+  };
+  function tk(d) { return d.ticker && String(d.ticker).toUpperCase() !== String(d.name).toUpperCase() ? d.ticker : ''; }
+  function nameFor(t) { var k = String(t || '').toUpperCase().replace(/\s+/g, ''); return TICKER_NAMES.hasOwnProperty(k) ? TICKER_NAMES[k] : ''; }
+  var AUTO_NAMES = {}; Object.keys(TICKER_NAMES).forEach(function (k) { AUTO_NAMES[TICKER_NAMES[k]] = true; });
+  function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function numStr(v, lo, hi) { // מחרוזת מספר תקינה או ''
+    if (v === null || v === undefined || v === '') return '';
+    var n = parseFloat(String(v).replace(/,/g, ''));
+    return (isFinite(n) && n >= lo && n <= hi) ? String(n) : '';
+  }
+  function nz(s) { var n = parseFloat(String(s).replace(/,/g, '')); return (isFinite(n) && n > 0) ? n : 0; }
+  function rate(s) { if (s === '' || s === undefined) return null; var n = parseFloat(String(s).replace(/,/g, '')); return isFinite(n) ? n : null; }
+  function txt(v, n) { return typeof v === 'string' ? v.slice(0, n) : ''; }
+
+  function blank() {
+    var cf = { income: '', extra: '', target: '6' };
+    CF_CATS.forEach(function (c) { cf[c[0]] = ''; });
+    return { fx: '', cashUsd: '', cashNis: '', mmf: '', tradeRate: '', eqTarget: '', rows: [], gemel: [], hish: [], trades: [], cf: cf, updatedAt: 0 };
+  }
+  function clean(o) {
+    var P = blank();
+    if (!o || typeof o !== 'object') return P;
+    P.fx = numStr(o.fx, 1, 10); P.cashUsd = numStr(o.cashUsd, 0, 1e10); P.cashNis = numStr(o.cashNis, 0, 1e10); P.mmf = numStr(o.mmf, 0, 1e10);
+    P.tradeRate = numStr(o.tradeRate, -100, 1000); P.eqTarget = numStr(o.eqTarget, 0, 100);
+    (Array.isArray(o.rows) ? o.rows.slice(0, 60) : []).forEach(function (r) {
+      if (!r || typeof r !== 'object') return;
+      P.rows.push({ n: txt(r.n, 40), t: txt(r.t, 12), c: (r.c === 'ILS' || r.c === 'AGO') ? r.c : 'USD', ty: TYPES[r.ty] ? r.ty : 'eq', q: numStr(r.q, 0, 1e10), k: numStr(r.k, 0, 1e10), p: numStr(r.p, 0, 1e10) });
+    });
+    ['gemel', 'hish'].forEach(function (g) {
+      (Array.isArray(o[g]) ? o[g].slice(0, 20) : []).forEach(function (r) {
+        if (!r || typeof r !== 'object') return;
+        P[g].push({ n: txt(r.n, 50), b: numStr(r.b, 0, 1e11), d: numStr(r.d, 0, 1e11), e: numStr(r.e, 0, 100), r: numStr(r.r, -100, 1000) });
+      });
+    });
+    (Array.isArray(o.trades) ? o.trades.slice(0, 400) : []).forEach(function (t) {
+      if (!t || typeof t !== 'object') return;
+      P.trades.push({ d: /^\d{4}-\d{2}-\d{2}$/.test(t.d || '') ? t.d : '', t: txt(t.t, 12).toUpperCase(), s: t.s === 'S' ? 'S' : 'B', q: numStr(t.q, 0, 1e10), p: numStr(t.p, 0, 1e10) });
+    });
+    if (o.cf && typeof o.cf === 'object') {
+      P.cf.income = numStr(o.cf.income, 0, 1e8); P.cf.extra = numStr(o.cf.extra, 0, 1e8);
+      P.cf.target = ['3', '6', '9', '12'].indexOf(String(o.cf.target)) >= 0 ? String(o.cf.target) : '6';
+      CF_CATS.forEach(function (c) { P.cf[c[0]] = numStr(o.cf[c[0]], 0, 1e8); });
+    }
+    if (typeof o.updatedAt === 'number' && isFinite(o.updatedAt)) P.updatedAt = o.updatedAt;
+    return P;
+  }
+  function readLocal() { try { return clean(JSON.parse(localStorage.getItem(KEY))); } catch (e) { return blank(); } }
+  var P = readLocal();
+
+  function $(id) { return document.getElementById(id); }
+  function fmtUsd(v) { return '$' + v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+  function fmtNis(v) { return '₪' + v.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 }); }
+  function fmtPct(v) { return v.toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + '%'; }
+  function sgn(v, d) { return (v < 0 ? '-' : '+') + Math.abs(v).toFixed(d === undefined ? 1 : d) + '%'; }
+  function sgnClr(v) { return v < 0 ? 'var(--loss-color)' : 'var(--gain-color)'; }
+  function FX() { return nz(P.fx) || (typeof M !== 'undefined' && M && M.fx > 0 ? M.fx : FX_DEF); }
+
+  // ---------- שמירה וסנכרון ----------
+  var saveTimer = null, statusEl = $('inStatus');
+  function setStatus(t) { statusEl.textContent = t; }
+  function setMsg(t, bad) { var m = $('inMsg'); m.textContent = t; m.className = 'in-msg' + (bad ? ' bad' : ''); }
+  function writeLocal() { try { localStorage.setItem(KEY, JSON.stringify(P)); return true; } catch (e) { return false; } }
+  async function getRef() {
+    try {
+      if (!(window.claude && window.claude.use)) return null;
+      var db = await window.claude.use('db'), u = await window.claude.use('user');
+      if (!db || !u) return null;
+      var id = await u.id(); if (!id) return null;
+      return db.collection('data/users/' + id).doc(DOC);
+    } catch (e) { return null; }
+  }
+  async function pushRemote() {
+    try { var ref = await getRef(); if (!ref) return false; await ref.set({ profile: JSON.stringify(P), updatedAt: P.updatedAt }); return true; } catch (e) { return false; }
+  }
+  function scheduleSave() {
+    clearTimeout(saveTimer);
+    setStatus('שומר...');
+    saveTimer = setTimeout(async function () {
+      P.updatedAt = Date.now();
+      var l = writeLocal(), r = await pushRemote();
+      setStatus(r ? 'נשמר ומסונכרן לחשבון שלך.' : (l ? 'נשמר במכשיר זה בלבד.' : 'השמירה נכשלה במכשיר הזה.'));
+    }, 600);
+  }
+
+  // ---------- עורך ----------
+  function fld(cls, label, attrs, val, extra) {
+    return '<label class="in-f ' + (extra || '') + '">' + label + '<input class="' + cls + '" type="text" autocomplete="off" ' + (cls === 'n' ? 'inputmode="decimal" ' : '') + attrs + ' value="' + esc(val) + '"></label>';
+  }
+  function sel(label, attrs, opts, cur) {
+    return '<label class="in-f">' + label + '<select ' + attrs + '>' + opts.map(function (o) { return '<option value="' + o[0] + '"' + (o[0] === cur ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') + '</select></label>';
+  }
+  function buildEditor() {
+    $('inRows').innerHTML = P.rows.map(function (r, i) {
+      var a = 'data-g="rows" data-i="' + i + '" ';
+      return '<div class="in-row">' +
+        fld('', 'שם', a + 'data-f="n" placeholder="למשל אפל"', r.n, 'in-wide') + fld('', 'סימול / מספר נייר', a + 'data-f="t" dir="ltr" placeholder="AAPL או מספר נייר"', r.t) +
+        sel('מטבע', a + 'data-f="c"', [['USD', 'דולר ($)'], ['ILS', 'שקל (₪)'], ['AGO', 'אגורות (אג\')']], r.c) + sel('סוג', a + 'data-f="ty"', [['eq', 'מניות'], ['bond', 'אג"ח'], ['other', 'אחר']], r.ty) +
+        fld('n', 'כמות', a + 'data-f="q"', r.q) + fld('n', 'מחיר קנייה', a + 'data-f="k"', r.k) + fld('n', 'מחיר נוכחי', a + 'data-f="p"', r.p) +
+        '<button type="button" class="toggle-btn in-x" data-del="rows" data-i="' + i + '" aria-label="מחק שורה">×</button></div>';
+    }).join('');
+    ['gemel', 'hish'].forEach(function (g) {
+      $(g === 'gemel' ? 'inGemel' : 'inHish').innerHTML = P[g].map(function (r, i) {
+        var a = 'data-g="' + g + '" data-i="' + i + '" ';
+        return '<div class="in-row g">' + fld('', 'שם הקופה', a + 'data-f="n"', r.n, 'in-wide') + fld('n', 'יתרה (₪)', a + 'data-f="b"', r.b) + fld('n', 'הופקד (₪)', a + 'data-f="d"', r.d) +
+          fld('n', '% מניות', a + 'data-f="e"', r.e) + fld('n', 'תשואה שנתית %', a + 'data-f="r"', r.r) +
+          '<button type="button" class="toggle-btn in-x" data-del="' + g + '" data-i="' + i + '" aria-label="מחק שורה">×</button></div>';
+      }).join('');
+    });
+    $('inTrades').innerHTML = P.trades.map(function (r, i) {
+      var a = 'data-g="trades" data-i="' + i + '" ';
+      return '<div class="in-row t"><label class="in-f">תאריך<input class="n" type="date" ' + a + 'data-f="d" value="' + esc(r.d) + '"></label>' + fld('', 'סימול', a + 'data-f="t" dir="ltr"', r.t) +
+        sel('פעולה', a + 'data-f="s"', [['B', 'קנייה'], ['S', 'מכירה']], r.s) + fld('n', 'כמות', a + 'data-f="q"', r.q) + fld('n', 'מחיר ($)', a + 'data-f="p"', r.p) +
+        '<button type="button" class="toggle-btn in-x" data-del="trades" data-i="' + i + '" aria-label="מחק שורה">×</button></div>';
+    }).join('');
+    TOP.forEach(function (k) { var el = document.querySelector('[data-top="' + k + '"]'); if (el) el.value = P[k]; });
+  }
+  var card = $('inCard');
+  card.addEventListener('input', function (e) {
+    var t = e.target;
+    if (t.getAttribute('data-top')) { P[t.getAttribute('data-top')] = t.value; }
+    else if (t.getAttribute('data-g')) { var row = P[t.getAttribute('data-g')][+t.getAttribute('data-i')]; if (row) row[t.getAttribute('data-f')] = t.value; }
+    else return;
+    scheduleSave(); render();
+  });
+  card.addEventListener('change', function (e) { // select + השלמת שם מסימול
+    var t = e.target;
+    if (t.getAttribute('data-g') === 'rows' && t.getAttribute('data-f') === 't') {
+      var i = +t.getAttribute('data-i'), row = P.rows[i]; if (!row) return;
+      row.t = t.value.trim().toUpperCase(); t.value = row.t;
+      var nm = nameFor(row.t), cur = (row.n || '').trim(), isIl = /^\d{5,9}$/.test(row.t.replace(/\s+/g, ''));
+      if (isIl) {
+        row.t = row.t.replace(/\s+/g, ''); t.value = row.t; if (row.c === 'USD') row.c = 'ILS';
+        var ci = document.querySelector('[data-g="rows"][data-i="' + i + '"][data-f="c"]'); if (ci) ci.value = row.c;
+      }
+      var ilNote = isIl ? ' נייר ישראלי: המטבע הוגדר לשקל. המחיר בבורסה מוצג באגורות, ולכן אפשר להזין אותו בשקלים (חלק ב-100), או לבחור במטבע "אגורות" ולהזין את המחיר כפי שהוא מופיע.' : '';
+      if (nm && (cur === '' || AUTO_NAMES[cur])) {
+        row.n = nm; var ni = document.querySelector('[data-g="rows"][data-i="' + i + '"][data-f="n"]'); if (ni) ni.value = nm;
+        setMsg('השם הושלם מהסימול: ' + nm + '.' + ilNote, false);
+      } else if (!nm && row.t && cur === '') setMsg((isIl ? 'מספר הנייר ' : 'הסימול ') + row.t + ' לא ברשימה שלי, הקלד את השם ידנית.' + ilNote, false);
+      else if (ilNote) setMsg(ilNote.trim(), false);
+      scheduleSave(); render(); return;
+    }
+    if (t.getAttribute('data-g') === 'trades' && t.getAttribute('data-f') === 't') { var tr = P.trades[+t.getAttribute('data-i')]; if (tr) { tr.t = t.value.trim().toUpperCase(); t.value = tr.t; scheduleSave(); render(); } return; }
+    if (t.tagName !== 'SELECT' || !t.getAttribute('data-g')) return;
+    var row2 = P[t.getAttribute('data-g')][+t.getAttribute('data-i')]; if (row2) { row2[t.getAttribute('data-f')] = t.value; scheduleSave(); render(); }
+  });
+  card.addEventListener('click', function (e) {
+    var d = e.target.getAttribute && e.target.getAttribute('data-del'); if (!d) return;
+    P[d].splice(+e.target.getAttribute('data-i'), 1); buildEditor(); scheduleSave(); render();
+  });
+  $('addTrade').addEventListener('click', function () { P.trades.push({ d: '', t: '', s: 'B', q: '', p: '' }); buildEditor(); });
+  $('addRow').addEventListener('click', function () { P.rows.push({ n: '', t: '', c: 'USD', ty: 'eq', q: '', k: '', p: '' }); buildEditor(); render(); });
+  $('addGemel').addEventListener('click', function () { P.gemel.push({ n: '', b: '', d: '', e: '', r: '' }); buildEditor(); });
+  $('addHish').addEventListener('click', function () { P.hish.push({ n: '', b: '', d: '', e: '', r: '' }); buildEditor(); });
+
+  // ---------- גיבוי / ייבוא / איפוס ----------
+  var pending = null, resetArmed = false;
+  $('btnExport').addEventListener('click', async function () {
+    var json = JSON.stringify({ app: 'portfolio-pilot', version: 2, exportedAt: new Date().toISOString(), profile: P }, null, 2);
+    try {
+      var dl = (window.claude && window.claude.use) ? await window.claude.use('downloads') : null;
+      if (!dl) throw { code: 'unavailable' };
+      await dl.save({ filename: 'portfolio-pilot-backup.json', data: json });
+      setMsg('הקובץ נשמר.', false);
+    } catch (e) {
+      if (e && e.code === 'declined') { setMsg('הייצוא בוטל.', false); return; }
+      var ta = $('inJson'); ta.value = json; ta.hidden = false;
+      setMsg('הורדת קובץ לא זמינה כאן. העתק את הטקסט שלמטה ושמור אותו בעצמך.', false);
+    }
+  });
+  $('btnImport').addEventListener('click', function () { $('fileIn').click(); });
+  $('fileIn').addEventListener('change', function () {
+    var f = this.files && this.files[0]; this.value = ''; if (!f) return;
+    if (f.size > 300 * 1024) { setMsg('הקובץ גדול מדי.', true); return; }
+    var rd = new FileReader();
+    rd.onload = function () {
+      try {
+        var o = JSON.parse(String(rd.result)), p = clean(o && o.profile ? o.profile : o);
+        var n = p.rows.length + p.gemel.length + p.hish.length + (p.cashUsd || p.cashNis || p.mmf ? 1 : 0);
+        if (!n) { setMsg('לא נמצאו בקובץ נתונים מוכרים.', true); return; }
+        pending = p; $('btnConfirm').hidden = false;
+        setMsg('הקובץ נקרא. לחץ "אשר ייבוא" כדי להחליף את הנתונים הנוכחיים.', false);
+      } catch (e) { setMsg('הקובץ אינו JSON תקין.', true); }
+    };
+    rd.onerror = function () { setMsg('קריאת הקובץ נכשלה.', true); };
+    rd.readAsText(f);
+  });
+  $('btnConfirm').addEventListener('click', function () {
+    if (!pending) return; P = pending; pending = null; this.hidden = true;
+    buildEditor(); buildCf(); render(); scheduleSave(); setMsg('הנתונים יובאו.', false);
+  });
+  $('btnReset').addEventListener('click', function () {
+    if (!resetArmed) { resetArmed = true; this.textContent = 'לחץ שוב לאישור איפוס'; setMsg('האיפוס מוחק את כל הנתונים שהזנת (ייצא גיבוי קודם אם צריך).', false); setTimeout(function () { resetArmed = false; $('btnReset').textContent = 'איפוס כל הנתונים'; }, 6000); return; }
+    resetArmed = false; this.textContent = 'איפוס כל הנתונים'; P = blank(); buildEditor(); buildCf(); render(); scheduleSave(); setMsg('הנתונים אופסו.', false);
+  });
+
+  // ---------- חישוב ----------
+  function compute() {
+    var fx = FX(), C = { fx: fx, items: [], stocks: [], tradeTotal: 0, eqTrade: 0, gemelTotal: 0, hishTotal: 0, eqFund: 0, unknownFunds: 0, held: [], pl: { tr: { inv: 0, cur: 0 }, gemel: { inv: 0, cur: 0 }, hish: { inv: 0, cur: 0 } }, plMissing: 0 };
+    P.rows.forEach(function (r) {
+      var pk = pack(r.t), q = nz(r.q), px = nz(r.p), k = nz(r.k), m = r.c === 'ILS' ? 1 : (r.c === 'AGO' ? 0.01 : fx);
+      if (!px && pk && pk.price > 0 && r.c === 'USD' && (pk.cur || 'USD') === 'USD') px = pk.price;
+      var val = q * px * m; if (!(val > 0)) return;
+      var it = { name: r.n || r.t || 'נייר ללא שם', ticker: r.t, valNis: val, usd: val / fx, gain: k > 0 && px > 0 ? (px - k) / k * 100 : null, gainNis: k > 0 ? q * (px - k) * m : null, costNis: k > 0 ? q * k * m : null, px: px, cur: r.c, ty: r.ty };
+      if (q > 0 && px > 0 && r.c === 'USD') C.held.push({ T: String(r.t || '').toUpperCase().replace(/\s+/g, ''), name: it.name, pk: pk, qty: q, px: px, k: k, val: val, row: r });
+      C.items.push(it); C.stocks.push(it); C.tradeTotal += val; if (r.ty === 'eq') C.eqTrade += val;
+      if (k > 0) { C.pl.tr.inv += q * k * m; C.pl.tr.cur += val; } else C.plMissing++;
+    });
+    var cu = nz(P.cashUsd) * fx, cn = nz(P.cashNis), mm = nz(P.mmf);
+    C.cash = cu + cn; C.mmf = mm;
+    if (mm > 0) C.items.push({ name: 'קרן כספית', ticker: 'MMF', valNis: mm, usd: mm / fx, gain: null, ty: 'other' });
+    if (cu + cn > 0) C.items.push({ name: 'מזומן', ticker: 'CASH', valNis: cu + cn, usd: (cu + cn) / fx, gain: null, ty: 'other' });
+    C.tradeTotal += cu + cn + mm;
+    ['gemel', 'hish'].forEach(function (g) {
+      P[g].forEach(function (r) {
+        var b = nz(r.b); if (!(b > 0)) return;
+        C[g + 'Total'] += b;
+        var dp = nz(r.d); if (dp > 0) { C.pl[g].inv += dp; C.pl[g].cur += b; } else C.plMissing++;
+        var e = rate(r.e); if (e === null) C.unknownFunds++; else C.eqFund += b * Math.min(Math.max(e, 0), 100) / 100;
+      });
+    });
+    C.total = C.tradeTotal + C.gemelTotal + C.hishTotal;
+    return C;
+  }
+
+  // ---------- עוגה ----------
+  var svgNS = 'http://www.w3.org/2000/svg', cx = 160, cy = 160, rO = 150, rI = 92, gap = 1.6;
+  function polar(r, a) { var t = (a - 90) * Math.PI / 180; return { x: cx + r * Math.cos(t), y: cy + r * Math.sin(t) }; }
+  function arc(s, e) {
+    s += gap / 2; e -= gap / 2; if (e < s) e = s;
+    var big = (e - s) > 180 ? 1 : 0, p0 = polar(rO, s), p1 = polar(rO, e), p2 = polar(rI, e), p3 = polar(rI, s);
+    if (e - s > 359.5) { e = s + 359.5; p1 = polar(rO, e); p2 = polar(rI, e); }
+    return ['M', p0.x, p0.y, 'A', rO, rO, 0, big, 1, p1.x, p1.y, 'L', p2.x, p2.y, 'A', rI, rI, 0, big, 0, p3.x, p3.y, 'Z'].join(' ');
+  }
+  function cssVar(slot) { return getComputedStyle(document.querySelector('.viz-root')).getPropertyValue('--series-' + slot).trim(); }
+  var tooltip = $('tooltip');
+  function moveTip(ev) { var x = ev.clientX + 16, y = ev.clientY + 16; if (x + 230 > window.innerWidth) x = ev.clientX - 230; if (y + 90 > window.innerHeight) y = ev.clientY - 90; tooltip.style.left = x + 'px'; tooltip.style.top = y + 'px'; }
+  function setActive(id, on) {
+    document.querySelectorAll('[data-id="' + id + '"]').forEach(function (el) { el.classList.toggle('hover', on); });
+    document.querySelectorAll('.slice').forEach(function (el) { el.classList.toggle('dim', on && el.getAttribute('data-id') !== id); });
+  }
+  function gainHtml(d) {
+    if (d.gain === null || d.gain === undefined) return '<span class="lg-gain na">רווח: לא הוזנה עלות</span>';
+    return '<span class="lg-gain ' + (d.gain >= 0 ? 'pos' : 'neg') + '">רווח: <span dir="ltr">' + (d.gain >= 0 ? '+' : '') + d.gain.toFixed(2) + '%</span></span>';
+  }
+  function buildPie(C) {
+    var svg = $('pie'), lg = $('legend'); svg.innerHTML = ''; lg.innerHTML = '';
+    var sorted = C.items.slice().sort(function (a, b) { return b.valNis - a.valNis; });
+    var slices = sorted;
+    var tot = C.tradeTotal, ang = 0;
+    slices.forEach(function (d, i) {
+      d.id = 's' + i; d.slot = (i % 9) + 1; d.pct = d.valNis / tot * 100;
+      var st = ang, en = ang + d.pct / 100 * 360; ang = en;
+      var path = document.createElementNS(svgNS, 'path');
+      path.setAttribute('d', arc(st, en)); path.setAttribute('fill', cssVar(d.slot)); path.setAttribute('class', 'slice'); path.setAttribute('data-id', d.id);
+      path.addEventListener('mouseenter', function (e) {
+        setActive(d.id, true);
+        tooltip.innerHTML = '<div class="t-name"><span class="t-swatch" style="background:' + cssVar(d.slot) + '"></span>' + esc(d.name) + (tk(d) ? ' (' + esc(tk(d)) + ')' : '') + '</div>' + (d.members ? '<div class="t-row">כולל: ' + esc(d.members) + '</div>' : '') +
+          '<div class="t-row">שווי: ' + fmtNis(d.valNis) + ' · ' + fmtUsd(d.valNis / C.fx) + '</div><div class="t-row">משקל בתיק המסחר: ' + fmtPct(d.pct) + '</div><div class="t-row">' + gainHtml(d) + '</div>';
+        tooltip.hidden = false; moveTip(e);
+      });
+      path.addEventListener('mousemove', moveTip);
+      path.addEventListener('mouseleave', function () { setActive(d.id, false); tooltip.hidden = true; });
+      svg.appendChild(path);
+      if (d.pct >= 8) {
+        var lp = polar((rO + rI) / 2, (st + en) / 2), t = document.createElementNS(svgNS, 'text');
+        t.setAttribute('x', lp.x); t.setAttribute('y', lp.y); t.setAttribute('class', 'slice-label'); t.textContent = Math.round(d.pct) + '%'; svg.appendChild(t);
+      }
+      var li = document.createElement('li'); li.setAttribute('data-id', d.id);
+      li.innerHTML = '<span class="swatch" style="background:' + cssVar(d.slot) + '"></span><span class="lg-text"><span class="lg-name">' + esc(d.name) + (tk(d) ? ' <span style="color:var(--text-muted);font-weight:500">' + esc(tk(d)) + '</span>' : '') + '</span>' +
+        '<span class="lg-sub">' + fmtNis(d.valNis) + '</span><span class="lg-sub">' + gainHtml(d) + '</span>' + (d.members ? '<span class="lg-sub">כולל: ' + esc(d.members) + '</span>' : '') + '</span><span class="lg-pct"><span class="lg-pct-l">משקל</span>' + fmtPct(d.pct) + '</span>';
+      li.addEventListener('mouseenter', function () { setActive(d.id, true); }); li.addEventListener('mouseleave', function () { setActive(d.id, false); });
+      lg.appendChild(li);
+    });
+    [['שווי תיק המסחר', cy - 52, 'total-caption'], [fmtNis(tot), cy - 30, 'total-usd'], [fmtUsd(tot / C.fx), cy - 13, 'total-nis']].forEach(function (a) {
+      var t = document.createElementNS(svgNS, 'text'); t.setAttribute('x', cx); t.setAttribute('y', a[1]); t.setAttribute('class', 'center-label ' + a[2]); t.textContent = a[0]; svg.appendChild(t);
+    });
+    (function () {
+      var inv = C.pl.tr.inv, cur = C.pl.tr.cur; $('trSummary').textContent = '';
+      if (!(inv > 0)) return;
+      var cum = (cur - inv) / inv * 100, ann = null, now = Date.now(), w = 0, ws = 0;
+      (P.trades || []).forEach(function (t) { if (t.s !== 'B') return; var a = nz(t.q) * nz(t.p), dt = Date.parse(t.d); if (a > 0 && dt > 0) { w += a; ws += a * Math.max(0, (now - dt) / 86400000); } });
+      var avgDays = w > 0 ? ws / w : 0; if (avgDays >= 30) ann = cum * 365 / avgDays;
+      function sgn(v) { return (v >= 0 ? '+' : '−') + Math.abs(v).toFixed(1) + '%'; }
+      function txt(y, cls, s) { var t = document.createElementNS(svgNS, 'text'); t.setAttribute('x', cx); t.setAttribute('y', y); t.setAttribute('class', 'center-label ' + cls); t.textContent = s; svg.appendChild(t); }
+      txt(cy + 8, 'tr-lbl', 'תשואת תיק המסחר');
+      txt(cy + 26, 'tr-cum ' + (cur >= inv ? 'pos' : 'neg'), 'רווח מצטבר \u2066' + (cur >= inv ? '+' : '−') + fmtNis(Math.abs(cur - inv)) + '\u2069');
+      txt(cy + 43, 'tr-cum ' + (cum >= 0 ? 'pos' : 'neg'), 'מצטברת \u2066' + sgn(cum) + '\u2069');
+      if (ann !== null) txt(cy + 60, 'tr-ann ' + (ann >= 0 ? 'pos' : 'neg'), 'שנתית \u2066' + sgn(ann) + '\u2069');
+      $('trSummary').innerHTML = '<b>בתוך העוגה:</b> תשואת הניירות שהוזן להם מחיר קנייה (בלי המזומן והקרן הכספית). <b>מצטברת</b> ' + sgn(cum) + ': ' + (cur >= inv ? 'רווח' : 'הפסד') + ' של ' + fmtNis(Math.abs(cur - inv)) + ' על ' + fmtNis(inv) + ' שהושקעו.' + (ann !== null ? ' <b>שנתית</b> ' + sgn(ann) + ': לפי משך ההחזקה הממוצע של הקניות שהוזנו (כ-' + Math.round(avgDays) + ' ימים), בהנחה שהקצב נשאר. תקופה קצרה, ולכן הערכה בלבד.' : ' כדי לראות תשואה שנתית, הוסף את הקניות שלך ב"הנתונים שלי" (לפחות 30 יום של החזקה).') + ' לפני מס, בלי רווחים ממומשים.';
+    })();
+    $('tableView').innerHTML = '<table class="data-table"><thead><tr><th>נכס</th><th class="num">שווי (₪)</th><th class="num">משקל</th><th class="num">רווח/הפסד</th></tr></thead><tbody>' +
+      sorted.map(function (d) { return '<tr><td>' + esc(d.name) + (tk(d) ? ' (' + esc(tk(d)) + ')' : '') + '</td><td class="num">' + fmtNis(d.valNis) + '</td><td class="num">' + fmtPct(d.valNis / tot * 100) + '</td><td class="num">' + gainHtml(d) + '</td></tr>'; }).join('') +
+      '<tr class="total-row"><td>סה״כ</td><td class="num">' + fmtNis(tot) + '</td><td class="num">100.0%</td><td class="num">-</td></tr></tbody></table>';
+  }
+  $('toggleTable').addEventListener('click', function () {
+    var show = $('tableView').hidden; $('tableView').hidden = !show; this.setAttribute('aria-expanded', String(show)); this.textContent = show ? 'הסתר טבלה' : 'הצג כטבלה';
+  });
+
+  // ---------- תצוגות ----------
+  function tile(k, v, sub) { return '<div class="cf-tile"><div class="k">' + k + '</div><div class="v">' + v + '</div><div class="s">' + sub + '</div></div>'; }
+  var lastC = null;
+  function render() {
+    var C = lastC = compute();
+    $('subtitle').textContent = C.total > 0 ? 'שער דולר-שקל: ' + C.fx.toFixed(4) + (nz(P.fx) ? ' (הוזן ידנית)' : ' (ברירת מחדל, אפשר לעדכן)') + (M.asof ? ' · נתוני הניתוח נכונים ל-' + M.asof : '') : 'מתחילים מאפס: מזינים את הנתונים שלך, והכלי מחשב ומציג את התמונה.';
+    $('outEmpty').hidden = C.total > 0; $('outMain').hidden = !(C.total > 0);
+    if (C.total > 0) {
+      $('totNis').textContent = fmtNis(C.total); $('totUsd').textContent = fmtUsd(C.total / C.fx);
+      var parts = [['תיק מסחר ומזומן', C.tradeTotal, 1], ['גמל להשקעה', C.gemelTotal, 3], ['קרנות השתלמות', C.hishTotal, 4]].filter(function (x) { return x[1] > 0; });
+      $('splitBar').innerHTML = parts.map(function (x) { var p = x[1] / C.total * 100; return '<div class="compare-seg" style="width:' + p + '%;background:' + cssVar(x[2]) + '">' + (p >= 12 ? Math.round(p) + '%' : '') + '</div>'; }).join('');
+      $('splitLegend').innerHTML = parts.map(function (x) { return '<div class="cl-item"><span class="cl-swatch" style="background:' + cssVar(x[2]) + '"></span><span class="cl-text"><span class="cl-name">' + x[0] + '</span><span class="cl-sub">' + fmtNis(x[1]) + ' (' + fmtPct(x[1] / C.total * 100) + ')</span></span></div>'; }).join('');
+      var plParts = [['תיק מסחר', C.pl.tr], ['גמל להשקעה', C.pl.gemel], ['קרנות השתלמות', C.pl.hish]].filter(function (x) { return x[1].inv > 0; });
+      $('plSection').hidden = !plParts.length;
+      if (plParts.length) {
+        var pi = 0, pc = 0; plParts.forEach(function (x) { pi += x[1].inv; pc += x[1].cur; });
+        var pp = pc - pi, pr = pp / pi * 100;
+        $('plTiles').innerHTML = tile('רווח כולל', '<span style="color:' + sgnClr(pp) + '">' + (pp < 0 ? '-' : '+') + fmtNis(Math.abs(pp)) + '</span>', 'ברוטו, לפני מס') + tile('תשואה על ההשקעה', '<span dir="ltr" style="color:' + sgnClr(pr) + '">' + sgn(pr) + '</span>', 'על ' + fmtNis(pi)) + tile('שווי הנוכחי של החלקים האלה', fmtNis(pc), 'מתוך ' + fmtNis(C.total));
+        $('plTable').innerHTML = '<table class="data-table"><thead><tr><th>חלק</th><th class="num">הושקע / הופקד</th><th class="num">שווי נוכחי</th><th class="num">רווח</th><th class="num">תשואה</th></tr></thead><tbody>' +
+          plParts.map(function (x) { var g2 = x[1].cur - x[1].inv, p2 = g2 / x[1].inv * 100; return '<tr><td>' + x[0] + '</td><td class="num">' + fmtNis(x[1].inv) + '</td><td class="num">' + fmtNis(x[1].cur) + '</td><td class="num"><span dir="ltr" style="font-weight:600;color:' + sgnClr(g2) + '">' + (g2 < 0 ? '-' : '+') + fmtNis(Math.abs(g2)) + '</span></td><td class="num"><span dir="ltr" style="font-weight:600;color:' + sgnClr(p2) + '">' + sgn(p2) + '</span></td></tr>'; }).join('') + '</tbody></table>';
+        $('plNote').textContent = (C.plMissing ? C.plMissing + ' חלקים בלי מחיר קנייה או סכום שהופקד לא נכללים בחישוב. ' : '') + 'המזומן והקרן הכספית לא נכללים. הרווח הוא רווח על הנייר, ועדיין לא מומש.';
+      }
+      $('trSection').hidden = !(C.tradeTotal > 0);
+      if (C.tradeTotal > 0) buildPie(C);
+      // מניות
+      var eq = C.eqTrade + C.eqFund, bond = 0;
+      P.rows.forEach(function (r) { if (r.ty === 'bond') bond += nz(r.q) * nz(r.p) * (r.c === 'ILS' ? 1 : (r.c === 'AGO' ? 0.01 : C.fx)); });
+      var tgt = rate(P.eqTarget), eqPct = eq / C.total * 100;
+      $('eqTiles').innerHTML = tile('מניות מכלל ההון', fmtPct(eqPct), fmtNis(eq)) + tile('אג"ח (בתיק המסחר)', fmtPct(bond / C.total * 100), fmtNis(bond)) +
+        tile('מזומן, קרן כספית ואחר', fmtPct(Math.max(0, 100 - eqPct - bond / C.total * 100)), 'השאר') +
+        (tgt !== null ? tile('פער מהיעד (' + tgt + '%)', (eqPct > tgt ? '+' : '-') + fmtNis(Math.abs(eqPct - tgt) / 100 * C.total), eqPct > tgt ? 'מעל היעד' : 'מתחת ליעד') : '');
+      $('eqNote').textContent = (C.unknownFunds ? C.unknownFunds + ' קופות לא כוללות אחוז מניות ונספרות כלא-מניות. ' : '') + 'אחוז המניות בקרנות הוא לפי מה שהזנת, ויכול להשתנות עם הזמן.';
+      // רווח שנתי
+      var rows = [], tr = rate(P.tradeRate);
+      if (tr !== null && C.tradeTotal > 0) rows.push(['תיק מסחר ומזומן', C.tradeTotal, tr]);
+      ['gemel', 'hish'].forEach(function (g) { P[g].forEach(function (r) { var b = nz(r.b), rr = rate(r.r); if (b > 0 && rr !== null) rows.push([(g === 'gemel' ? 'גמל: ' : 'השתלמות: ') + (r.n || 'ללא שם'), b, rr]); }); });
+      var ann = $('annSection'); ann.hidden = !rows.length;
+      if (rows.length) {
+        var tb = 0, tp = 0; rows.forEach(function (x) { tb += x[1]; tp += x[1] * x[2] / 100; });
+        $('annTiles').innerHTML = tile('רווח שנתי משוער', (tp < 0 ? '-' : '') + fmtNis(Math.abs(tp)), 'ברוטו, לפני מס') + tile('בממוצע לחודש', (tp < 0 ? '-' : '') + fmtNis(Math.abs(tp) / 12), 'חלוקה שווה ל-12') + tile('תשואה משוקללת', sgn(tp / tb * 100), 'על ' + fmtNis(tb));
+        $('annTable').innerHTML = '<table class="data-table"><thead><tr><th>חלק</th><th class="num">יתרה</th><th class="num">תשואה שנתית</th><th class="num">רווח שנתי</th></tr></thead><tbody>' +
+          rows.map(function (x) { return '<tr><td>' + esc(x[0]) + '</td><td class="num">' + fmtNis(x[1]) + '</td><td class="num"><span dir="ltr" style="font-weight:600;color:' + sgnClr(x[2]) + '">' + sgn(x[2]) + '</span></td><td class="num">' + fmtNis(x[1] * x[2] / 100) + '</td></tr>'; }).join('') + '</tbody></table>';
+        $('annNote').textContent = 'חלקים בלי תשואה שהזנת לא נכללים בחישוב. רווח שמצטבר בתוך קרן השתלמות או גמל אינו כסף שמגיע אליך בחודש, אלא עלייה בשווי הקופה.';
+      }
+    }
+    renderAnalysis(C);
+    renderCf();
+  }
+
+  // ---------- נתוני שוק ותצוגות ניתוח (מבוסס על הכלי המקורי) ----------
+  var M = (function () { try { var o = JSON.parse(document.getElementById('marketData').textContent); return (o && typeof o === 'object') ? o : {}; } catch (e) { return {}; } })();
+  M.tickers = M.tickers || {};
+  function pack(t) { var k = String(t || '').toUpperCase().replace(/\s+/g, ''); return M.tickers.hasOwnProperty(k) ? M.tickers[k] : null; }
+  var PE_MAX = 11, FCF_YIELD_MIN = 8, FCF_TREND_MIN = -10, ROE_MIN = 15;
+  var moatMap = { ok: ['✓ אין בעיה', 'var(--gain-color)'], weak: ['● חלש, יציב', 'var(--text-secondary)'], bad: ['✗ יש בעיה', 'var(--loss-color)'], none: ['– לא רלוונטי', 'var(--text-muted)'], contested: ['● תחת איום', 'var(--text-secondary)'] };
+  var growthMap = { up: ['↑ מאיצה', 'var(--gain-color)'], slow: ['↓ מאטה', 'var(--text-secondary)'], flat: ['↔ יציבה, נמוכה', 'var(--text-secondary)'], neg: ['↓ שלילית', 'var(--loss-color)'], na: ['– לא רלוונטי', 'var(--text-muted)'] };
+  function span(cls, t) { return '<span class="' + cls + '">' + t + '</span>'; }
+  function why(t) { return '<span class="bf-why">' + t + '</span>'; }
+  function bmColor(v) { return v >= 0 ? 'var(--gain-color)' : 'var(--loss-color)'; }
+  function pcs(v) { return (v >= 0 ? '+' : '−') + Math.abs(v).toFixed(2) + '%'; }
+  function isoDm(k) { return k.slice(8, 10) + '.' + k.slice(5, 7); }
+
+  function bfCells(inp, px) {
+    var peT = inp.epsT ? px / inp.epsT : null, peF = inp.epsF ? px / inp.epsF : null;
+    var pePass = peF !== null && peF <= PE_MAX && inp.earnOk !== false;
+    var peLine = (peT !== null ? 'עוקב ' + peT.toFixed(1) : 'עוקב: אין (GAAP בהפסד)') + ' · עתידי ' + (peF !== null ? peF.toFixed(1) : '-');
+    var peNotes = (inp.peNotes || []).slice();
+    if (inp.epsN) peNotes.push('בלי החזרי מכסים: ' + (px / inp.epsN).toFixed(1));
+    if (inp.bv) peNotes.push('פי ' + (px / inp.bv).toFixed(2) + ' מההון');
+    if (inp.pen) peNotes.push(inp.pen);
+    var pe = '<td style="min-width:130px">' + (pePass ? span('bf-pass', '✓ עובר') : span('bf-fail', '✗ לא עובר')) + why(peLine) + peNotes.map(why).join('') + '</td>';
+    var fcfYield = inp.fcfPs ? inp.fcfPs / px * 100 : null;
+    var fcfPass = inp.fcfPs ? (fcfYield >= FCF_YIELD_MIN && inp.fcfTrend >= FCF_TREND_MIN) : (inp.roe >= ROE_MIN);
+    var fcfLines = inp.fcfPs ? ['מזומן שנשאר: ' + inp.fcfTotal + ' בשנה', 'כלומר ' + fcfYield.toFixed(1) + '% ממחיר המניה', 'מגמה: ' + (inp.fcfTrend >= 0 ? 'עלייה' : 'ירידה') + ' של ' + Math.abs(inp.fcfTrend) + '% בשנה'] : ['מזומן שנשאר: לא רלוונטי' + (inp.roe ? ' (במקומו ROE ' + inp.roe + '%)' : '')];
+    fcfLines = fcfLines.concat(inp.fcfNotes || []);
+    var fcf = '<td style="min-width:130px">' + (fcfPass ? span('bf-pass', '✓ עובר') : span('bf-fail', '✗ לא עובר')) + fcfLines.map(why).join('') + '</td>';
+    var mh = moatMap[inp.moat] || moatMap.none, gt = growthMap[inp.growth] || growthMap.na;
+    var moat = '<td><span style="font-weight:700;font-size:12px;white-space:nowrap;color:' + mh[1] + '">' + mh[0] + '</span>' + why(esc(inp.moatTxt || '')) + '</td>';
+    var growth = '<td><span style="font-weight:700;font-size:12px;white-space:nowrap;color:' + gt[1] + '">' + gt[0] + '</span>' + why(esc(inp.growthTxt || '')) + (inp.track ? why('מה לעקוב: ' + esc(inp.track)) : '') + '</td>';
+    var pass = (pePass ? 1 : 0) + (fcfPass ? 1 : 0) + (inp.moat === 'ok' ? 1 : 0) + (inp.growth === 'up' ? 1 : 0);
+    return { pe: pe, fcf: fcf, moat: moat, growth: growth, pass: pass, pePass: pePass, fcfPass: fcfPass };
+  }
+  function secHide(id, hide) { var e = $(id); if (e) e.hidden = hide; }
+
+  function renderAnalysis(C) {
+    var held = C.held, hasAny = false;
+    // --- קריטריונים (מניות שבתיק) ---
+    var bfHeld = held.filter(function (h) { return h.pk && h.pk.bf; });
+    var pending = held.filter(function (h) { return h.row.ty === 'eq' && h.row.c === 'USD' && !(h.pk && h.pk.bf); }).map(function (h) { return h.T || h.name; });
+    secHide('bfSection', !bfHeld.length);
+    if (bfHeld.length) {
+      hasAny = true;
+      $('bfTable').innerHTML = '<table class="data-table"><thead><tr><th>מניה</th><th class="num">רווח נוכחי</th><th>מכפיל רווח P/E - Price to Earnings (עוקב · עתידי)</th><th>FCF - Free Cash Flow, תזרים מזומנים חופשי (מזומן שנשאר בכיס)<span class="bf-why">סכום בשנה, ואחוז ממחיר המניה; מגמה = ממוצע 4 שנים</span></th><th>חפיר - Moat (מצב להחזקה)</th><th>צמיחה - Growth (כיוון · מה לעקוב)</th><th class="num">עברו (מתוך 4)</th><th>החזקה (לפי הכללים)</th><th>עיבוי (לפי הכללים)</th></tr></thead><tbody>' +
+        bfHeld.map(function (h) {
+          var inp = h.pk.bf, c = bfCells(inp, h.px), weight = C.tradeTotal > 0 ? h.val / C.tradeTotal * 100 : 0;
+          var gUsd = h.k > 0 ? h.qty * (h.px - h.k) : null, gp = h.k > 0 ? (h.px - h.k) / h.k * 100 : null;
+          var gainCell = gp === null ? '<td class="num"><span class="bf-why" style="text-align:end">לא הוזנה עלות</span></td>' :
+            '<td class="num"><span dir="ltr" style="font-weight:700;color:' + bmColor(gp) + '">' + (gp >= 0 ? '+' : '-') + Math.abs(gp).toFixed(1) + '%</span><span class="bf-why" dir="ltr" style="text-align:end">' + (gUsd >= 0 ? '+' : '-') + fmtUsd(Math.abs(gUsd)) + '</span><span class="bf-why" dir="ltr" style="text-align:end">' + (gUsd >= 0 ? '+' : '-') + fmtNis(Math.abs(gUsd) * C.fx) + '</span></td>';
+          var reasons = [];
+          if (!c.pePass) reasons.push('P/E לא עובר'); if (!c.fcfPass) reasons.push('FCF לא עובר');
+          if (inp.moat !== 'ok') reasons.push(inp.moat === 'bad' ? 'חפיר בבעיה' : (inp.moat === 'weak' ? 'חפיר חלש' : (inp.moat === 'contested' ? 'חפיר תחת איום' : 'אין חפיר')));
+          if (inp.growth === 'neg') reasons.push('צמיחה שלילית');
+          var addCell = reasons.length === 0 ? '<td><span style="font-weight:700;font-size:12px;white-space:nowrap;color:var(--gain-color)">✓ מועמדת</span>' + why('משקל ' + weight.toFixed(1) + '% מתיק המסחר') + '</td>' : '<td><span style="font-weight:700;font-size:12px;white-space:nowrap;color:var(--text-secondary)">✗ לא לעיבוי</span>' + why(reasons.join(' · ')) + '</td>';
+          var red = [], yellow = [];
+          if (inp.moat === 'bad') red.push('חפיר בבעיה'); if (inp.growth === 'neg') red.push('צמיחה שלילית'); if (inp.fcfPs && inp.fcfTrend < 0) red.push('FCF בירידה');
+          if (inp.moat === 'weak' || inp.moat === 'contested') yellow.push(inp.moat === 'weak' ? 'חפיר חלש' : 'חפיר תחת איום'); if (inp.growth === 'slow') yellow.push('צמיחה מאטה'); if (inp.growth === 'flat') yellow.push('צמיחה נמוכה');
+          var hl, hc, hw;
+          if (inp.cyclical) { hl = '● מחזורית'; hc = 'var(--text-secondary)'; hw = 'ההחלטה תלויה במחזור הענף; ' + red.join(' · '); }
+          else if (red.length >= 2) { hl = '✗ לשקול מחדש'; hc = 'var(--loss-color)'; hw = red.join(' · '); }
+          else if (red.length === 1) { hl = '! להחזיק ולבדוק'; hc = 'var(--text-primary)'; hw = red.concat(yellow).join(' · '); }
+          else if (yellow.length) { hl = '✓ להחזיק ולעקוב'; hc = 'var(--gain-color)'; hw = yellow.join(' · '); }
+          else { hl = '✓ להמשיך להחזיק'; hc = 'var(--gain-color)'; hw = 'אין דגלים'; }
+          var holdCell = '<td><span style="font-weight:700;font-size:12px;white-space:nowrap;color:' + hc + '">' + hl + '</span>' + why(hw) + '</td>';
+          return '<tr><td>' + esc(h.name) + ' <span style="color:var(--text-muted)">' + esc(h.T) + '</span></td>' + gainCell + c.pe + c.fcf + c.moat + c.growth + '<td class="num" style="font-weight:700"><span dir="ltr">' + c.pass + '/4</span></td>' + holdCell + addCell + '</tr>';
+        }).join('') + '</tbody></table>';
+      var baseRows = bfHeld.filter(function (h) { return h.pk.base; });
+      $('bfBase').innerHTML = baseRows.length ? '<table class="data-table"><thead><tr><th>מניה</th><th class="num">הכנסות</th><th class="num">EPS</th><th class="num">FCF</th><th class="num">ROIC (טווח 5 שנים)</th><th class="num">רווח גולמי</th></tr></thead><tbody>' +
+        baseRows.map(function (h) { return '<tr><td>' + esc(h.T) + '</td>' + h.pk.base.map(function (v) { return '<td class="num"><span dir="ltr">' + esc(v) + '</span></td>'; }).join('') + '</tr>'; }).join('') + '</tbody></table>' : '';
+      $('bfNote').textContent = 'ה-P/E ותשואת ה-FCF מחושבים אוטומטית מהמחיר העדכני (P/E עד 11 על רווח יציב, תשואת FCF מ-8% ומגמה שאינה יורדת ביותר מ-10% בשנה). נתוני החפיר והצמיחה מתעדכנים ידנית אחרי כל דוח רבעוני. נתוני הניתוח נכונים ל-' + (M.asof || '') + '. זה ניתוח לפי קריטריונים ולא ייעוץ השקעות אישי.';
+    }
+    var pendEl = $('anaPending');
+    pendEl.hidden = !pending.length;
+    if (pending.length) pendEl.textContent = 'עדיין אין ניתוח (קריטריונים, דיבידנד, השוואה ולוח דוחות) עבור: ' + pending.join(', ') + '. הניתוח של כל מניה מוכן לפי בקשה.';
+
+    // --- מעקב (מניות שאינן בתיק) ---
+    var heldT = {}; held.forEach(function (h) { heldT[h.T] = true; });
+    var wl = Object.keys(M.tickers).filter(function (t) { return M.tickers[t].watch && M.tickers[t].bf && !heldT[t]; });
+    secHide('wlSection', !wl.length);
+    if (wl.length) {
+      hasAny = true;
+      $('wlTable').innerHTML = '<table class="data-table"><thead><tr><th>מניה</th><th class="num">מחיר</th><th>מכפיל רווח P/E (עוקב · עתידי)</th><th>FCF - תזרים מזומנים חופשי<span class="bf-why">סכום בשנה, ואחוז ממחיר המניה; מגמה = ממוצע 4 שנים</span></th><th>חפיר - Moat</th><th>צמיחה - Growth (כיוון · מה לעקוב)</th><th class="num">עברו (מתוך 4)</th><th>מעקב</th></tr></thead><tbody>' +
+        wl.map(function (t) {
+          var pk = M.tickers[t], inp = pk.bf, px = pk.price, c = bfCells(inp, px), miss = [];
+          if (!c.pePass) miss.push('מכפיל'); if (!c.fcfPass) miss.push('FCF'); if (inp.moat !== 'ok') miss.push('חפיר ללא בעיה'); if (inp.growth !== 'up') miss.push('צמיחה מואצת');
+          var added = pk.watchAdded, chg = added ? (px / added.px - 1) * 100 : null;
+          var priceCell = '<td class="num"><span dir="ltr" style="font-weight:700">' + fmtUsd(px) + '</span><span class="bf-why" dir="ltr" style="text-align:end">' + fmtNis(px * C.fx) + '</span>' + (chg !== null ? '<span class="bf-why" style="text-align:end">מאז ' + esc(added.date) + ': <span dir="ltr" style="color:' + bmColor(chg) + '">' + (chg >= 0 ? '+' : '-') + Math.abs(chg).toFixed(1) + '%</span></span>' : '') + '</td>';
+          var st = '<td><span style="font-weight:700;font-size:12px;white-space:nowrap;color:var(--text-primary)">● במעקב</span>' + (miss.length ? why('חסר: ' + miss.join(' · ')) : why('עומדת בארבעת הקריטריונים')) + (inp.next ? why('לבדוק ב: ' + esc(inp.next)) : '') + '</td>';
+          return '<tr><td>' + esc(pk.name || t) + ' <span style="color:var(--text-muted)">' + t + '</span></td>' + priceCell + c.pe + c.fcf + c.moat + c.growth + '<td class="num" style="font-weight:700"><span dir="ltr">' + c.pass + '/4</span></td>' + st + '</tr>';
+        }).join('') + '</tbody></table>';
+      $('wlNote').textContent = 'הכללים זהים לטבלה של המניות שבתיק. הכנסה לרשימה אינה המלצה לקנות. נתוני הניתוח נכונים ל-' + (M.asof || '') + '.';
+    }
+
+    // --- דיבידנדים ---
+    var dv = held.filter(function (h) { return h.pk && h.pk.div && h.pk.div.perShare > 0; });
+    secHide('divSection', !dv.length);
+    if (dv.length) {
+      hasAny = true;
+      var annUsd = 0;
+      var rows = dv.map(function (h) { var f = h.pk.div.freq || 4, a = h.pk.div.perShare * f * h.qty; annUsd += a; return '<tr><td>' + esc(h.name) + ' <span style="color:var(--text-muted)">' + h.T + '</span></td><td class="num">' + fmtUsd(h.pk.div.perShare) + '</td><td class="num">' + f + '</td><td class="num">' + fmtUsd(a) + '</td><td class="num">' + fmtNis(a * C.fx) + '</td></tr>'; }).join('');
+      $('divTable').innerHTML = '<table class="data-table"><thead><tr><th>מניה</th><th class="num">דיב׳ לתשלום למניה</th><th class="num">תשלומים בשנה</th><th class="num">צפי שנתי ($)</th><th class="num">צפי שנתי (₪)</th></tr></thead><tbody>' + rows +
+        '<tr class="total-row"><td>סה״כ</td><td class="num">-</td><td class="num">-</td><td class="num">' + fmtUsd(annUsd) + '</td><td class="num">' + fmtNis(annUsd * C.fx) + '</td></tr></tbody></table>';
+      var stocksVal = 0; held.forEach(function (h) { if (h.row.ty === 'eq') stocksVal += h.val; });
+      $('divNote').textContent = 'צפי שנתי ברוטו: ' + fmtNis(annUsd * C.fx) + ', כ-' + fmtNis(annUsd * C.fx / 12) + ' בחודש. נטו אחרי כ-25% מס (קירוב): כ-' + fmtNis(annUsd * 0.75 * C.fx / 12) + ' בחודש. תשואת דיבידנד: ' + (C.tradeTotal > 0 ? (annUsd * C.fx / C.tradeTotal * 100).toFixed(1) : '0.0') + '% מתיק המסחר' + (stocksVal > 0 ? ', ' + (annUsd * C.fx / stocksVal * 100).toFixed(1) + '% מהמניות' : '') + '. מניות שלא מחלקות דיבידנד לא מופיעות בטבלה.';
+    }
+
+    // --- השוואה מול המדד ---
+    var bm = M.bm, bmHeld = bm ? held.filter(function (h) { return h.pk && h.pk.baseClose > 0; }) : [];
+    secHide('bmSection', !bmHeld.length);
+    if (bmHeld.length) {
+      hasAny = true;
+      var vb = 0, vc = 0; bmHeld.forEach(function (h) { vb += h.qty * h.pk.baseClose; vc += h.qty * h.px; });
+      var bp = (vc / vb - 1) * 100, sp = (bm.spyCur / bm.spyBase - 1) * 100, df = bp - sp;
+      function bs(v) { return '<span dir="ltr" style="font-weight:700;color:' + bmColor(v) + '">' + pcs(v) + '</span>'; }
+      $('bmBasket').innerHTML = bs(bp); $('bmSpy').innerHTML = bs(sp);
+      $('bmDiff').innerHTML = '<span dir="ltr" style="font-weight:700;color:' + bmColor(df) + '">' + (df >= 0 ? '+' : '−') + Math.abs(df).toFixed(2) + ' נק׳ אחוז</span>';
+      $('bmTable').innerHTML = '<table class="data-table"><thead><tr><th>מניה</th><th class="num">מחיר בסיס (' + esc(bm.dateLabel || bm.date) + ')</th><th class="num">מחיר נוכחי</th><th class="num">שינוי</th><th class="num">מול S&amp;P 500</th></tr></thead><tbody>' +
+        bmHeld.map(function (h) { var ch = (h.px / h.pk.baseClose - 1) * 100, vs = ch - sp; return '<tr><td>' + h.T + '</td><td class="num"><span dir="ltr">' + fmtUsd(h.pk.baseClose) + '</span></td><td class="num"><span dir="ltr">' + fmtUsd(h.px) + '</span></td><td class="num">' + bs(ch) + '</td><td class="num"><span dir="ltr" style="font-weight:600;color:' + bmColor(vs) + '">' + (vs >= 0 ? '+' : '−') + Math.abs(vs).toFixed(2) + ' נק׳</span></td></tr>'; }).join('') +
+        '<tr style="font-weight:700"><td>סך המניות</td><td class="num"><span dir="ltr">' + fmtUsd(vb) + '</span></td><td class="num"><span dir="ltr">' + fmtUsd(vc) + '</span></td><td class="num">' + bs(bp) + '</td><td class="num"><span dir="ltr" style="color:' + bmColor(df) + '">' + (df >= 0 ? '+' : '−') + Math.abs(df).toFixed(2) + ' נק׳</span></td></tr>' +
+        '<tr><td>S&amp;P 500 (SPY)</td><td class="num"><span dir="ltr">' + fmtUsd(bm.spyBase) + '</span></td><td class="num"><span dir="ltr">' + fmtUsd(bm.spyCur) + '</span></td><td class="num">' + bs(sp) + '</td><td class="num">-</td></tr></tbody></table>';
+      $('bmNote').textContent = 'נקודת הבסיס היא מחיר הסגירה של ' + (bm.dateLabel || bm.date) + '. ההשוואה כוללת רק מניות שיש להן נתון, לא כוללת קרנות, אג"ח, קרן כספית ומזומן, ולא כוללת דיבידנדים. תקופה קצרה אינה הוכחה.';
+    }
+
+    // --- לוח אירועים ---
+    var evs = [];
+    held.forEach(function (h) { if (h.pk && h.pk.events) h.pk.events.forEach(function (e) { evs.push({ d: e.d || null, who: h.T, what: e.what, st: e.st || 'est' }); }); });
+    secHide('evSection', !evs.length);
+    if (evs.length) {
+      hasAny = true;
+      evs.sort(function (a, b) { if (!a.d) return 1; if (!b.d) return -1; return a.d < b.d ? -1 : 1; });
+      var today = new Date(); today.setHours(0, 0, 0, 0);
+      var stl = { confirmed: '✓ אושר', est: '~ משוער', unk: '? לא ידוע' };
+      $('evTable').innerHTML = '<table class="data-table"><thead><tr><th>תאריך</th><th>מניה</th><th>אירוע</th><th>סטטוס</th><th class="num">בעוד</th></tr></thead><tbody>' + evs.map(function (e) {
+        var dt = '-', left = '-';
+        if (e.d) { var p = e.d.split('-'); dt = p[2] + '.' + p[1] + '.' + p[0]; var days = Math.round((new Date(+p[0], +p[1] - 1, +p[2]) - today) / 86400000); left = days > 0 ? days + ' ימים' : (days === 0 ? 'היום' : 'עבר'); }
+        return '<tr><td><span dir="ltr">' + dt + '</span></td><td>' + esc(e.who) + '</td><td>' + esc(e.what) + '</td><td>' + (stl[e.st] || '') + '</td><td class="num">' + left + '</td></tr>';
+      }).join('') + '</tbody></table>';
+      $('evNote').textContent = 'תאריכים שאושרו על ידי החברה מסומנים כ"אושר", והשאר משוערים. אחרי כל דוח מעדכנים את נתוני הבסיס בטבלת הקריטריונים (בקש "עדכן קריטריונים" וציין את המניה).';
+    }
+    hasAny = renderHs(C) || hasAny;
+    $('anaTitle').hidden = !hasAny;
+  }
+
+  // --- גרף התקדמות מול S&P 500 ---
+  var hsMode = 'ils';
+  function renderHs(C) {
+    var H = M.hist, trades = [], skipped = [];
+    P.trades.forEach(function (t) {
+      var T = String(t.t || '').toUpperCase().replace(/\s+/g, ''), q = nz(t.q), p = nz(t.p);
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(t.d || '') || !T || !(q > 0) || !(p > 0)) return;
+      if (!H || !H.close || !H.close[T]) { if (skipped.indexOf(T) < 0) skipped.push(T); return; }
+      trades.push([t.d, T, t.s === 'S' ? 'S' : 'B', q, p]);
+    });
+    if (!H || !H.dates || !trades.length) { secHide('hsSection', true); return false; }
+    trades.sort(function (a, b) { return a[0] < b[0] ? -1 : (a[0] > b[0] ? 1 : 0); });
+    var idx0 = -1; for (var z = 0; z < H.dates.length; z++) { if (H.dates[z] >= trades[0][0]) { idx0 = z; break; } }
+    if (idx0 < 0 || H.dates.length - idx0 < 2) { secHide('hsSection', true); return false; }
+    var dates = H.dates.slice(idx0), N = dates.length, last = N - 1;
+    function lastLE(d) { var k = 0; for (var j = 0; j < H.dates.length; j++) { if (H.dates[j] <= d) k = j; else break; } return k; }
+    function spyAt(d) { return H.spy[lastLE(d)]; }
+    function fxAt(d) { return H.fx ? H.fx[lastLE(d)] : C.fx; }
+    var tickers = {}; trades.forEach(function (t) { tickers[t[1]] = true; });
+    var S$ = { val: [], alt: [], inv: [] }, SN = { val: [], alt: [], inv: [] }, gross = { u: 0, n: 0 };
+    dates.forEach(function (d, i) {
+      var q = {}, inv = 0, invN = 0, units = 0, gU = 0, gN = 0;
+      trades.forEach(function (t) {
+        if (t[0] > d) return;
+        var amt = t[3] * t[4], sg = t[2] === 'B' ? 1 : -1, fx = fxAt(t[0]);
+        q[t[1]] = (q[t[1]] || 0) + sg * t[3]; inv += sg * amt; invN += sg * amt * fx; units += sg * amt / spyAt(t[0]);
+        if (sg > 0) { gU += amt; gN += amt * fx; }
+      });
+      var v = 0; Object.keys(tickers).forEach(function (T) { v += (q[T] || 0) * H.close[T][idx0 + i]; });
+      var a = units * H.spy[idx0 + i], fxi = H.fx ? H.fx[idx0 + i] : C.fx;
+      S$.val.push(v); S$.alt.push(a); S$.inv.push(inv); SN.val.push(v * fxi); SN.alt.push(a * fxi); SN.inv.push(invN);
+      gross.u = gU; gross.n = gN;
+    });
+    secHide('hsSection', false);
+    function tOf(k) { var p = k.split('-'); return Date.UTC(+p[0], +p[1] - 1, +p[2]); }
+    var hsT0 = tOf(dates[0]), hsEnd = Math.max(tOf(dates[last]), hsT0 + 86400000), hsT1 = hsEnd + (hsEnd - hsT0) * 0.14;
+    function stepPoints(ils) {
+      var pts = [], inv = 0, byDate = {};
+      trades.forEach(function (t) { var amt = t[3] * t[4] * (t[2] === 'B' ? 1 : -1) * (ils ? fxAt(t[0]) : 1); byDate[t[0]] = (byDate[t[0]] || 0) + amt; });
+      Object.keys(byDate).sort().forEach(function (d) { pts.push([d < dates[0] ? dates[0] : d, inv]); inv += byDate[d]; pts.push([d < dates[0] ? dates[0] : d, inv]); });
+      pts.push([dates[last], inv]); return pts;
+    }
+    function draw() {
+      var ils = hsMode === 'ils', S = ils ? SN : S$, gr = ils ? gross.n : gross.u;
+      function fmtCur(v) { return ils ? fmtNis(v) : fmtUsd(v); }
+      function fmtSgn(v) { return (v >= 0 ? '+' : '−') + fmtCur(Math.abs(v)); }
+      function fmtK(v) { return (ils ? '₪' : '$') + (v >= 1000 ? (v / 1000) + 'K' : v); }
+      function hDate(i) { return isoDm(dates[i]); }
+      function hPct(v) { return (v >= 0 ? '+' : '−') + Math.abs(v).toFixed(1) + '%'; }
+      var V = S.val[last], A = S.alt[last], I = S.inv[last];
+      var vRet = gr > 0 ? (V - I) / gr * 100 : 0, aRet = gr > 0 ? (A - I) / gr * 100 : 0, gap = V - A;
+      $('hsSummary').innerHTML = 'מ-' + hDate(0) + ' עד ' + hDate(last) + ': קנית נטו ' + fmtCur(I) + ' (סך הקניות ' + fmtCur(gr) + '). שווי המניות היום ' + fmtCur(V) + ', רווח של <span dir="ltr" style="font-weight:700;color:' + bmColor(V - I) + '">' + fmtSgn(V - I) + ' (' + hPct(vRet) + ' על סך הקניות)</span>. ' +
+        'אותם סכומים ב-S&amp;P 500 היו שווים ' + fmtCur(A) + ', רווח של <span dir="ltr" style="font-weight:700;color:' + bmColor(A - I) + '">' + fmtSgn(A - I) + ' (' + hPct(aRet) + ')</span>. ' +
+        'הפער: <span dir="ltr" style="font-weight:700;color:' + bmColor(gap) + '">' + fmtSgn(gap) + '</span> ' + (gap >= 0 ? 'לטובת המניות שבחרת' : 'לטובת S&amp;P 500') + '.';
+      var steps = stepPoints(ils), hiV = Math.max.apply(null, S.val.concat(S.alt, S.inv, [1]));
+      var cand = [100, 200, 500, 1000, 2000, 2500, 5000, 10000, 20000, 25000, 50000, 100000, 250000, 500000, 1000000], step = cand[cand.length - 1];
+      for (var ci = 0; ci < cand.length; ci++) { if (cand[ci] >= hiV / 5) { step = cand[ci]; break; } }
+      var yMin = 0, yMax = Math.ceil(hiV * 1.04 / step) * step;
+      var W = 640, Hh = 300, mL = 44, mR = 14, mT = 14, mB = 28, pw = W - mL - mR, ph = Hh - mT - mB;
+      function X(i) { return mL + (tOf(dates[i]) - hsT0) / (hsT1 - hsT0) * pw; }
+      function XD(k) { return mL + (tOf(k) - hsT0) / (hsT1 - hsT0) * pw; }
+      function Y(v) { return mT + (yMax - v) / (yMax - yMin) * ph; }
+      function path(arr) { return arr.map(function (v, i) { return (i ? 'L' : 'M') + X(i).toFixed(1) + ' ' + Y(v).toFixed(1); }).join(''); }
+      var stepPath = steps.map(function (p, i) { return (i ? 'L' : 'M') + XD(p[0]).toFixed(1) + ' ' + Y(p[1]).toFixed(1); }).join('');
+      var svg = '<svg viewBox="0 0 ' + W + ' ' + Hh + '" role="img" aria-label="גרף: שווי המניות בפועל מול אותם סכומים ב-S&amp;P 500 ומול הסכום שהושקע נטו">';
+      for (var gv = yMin; gv <= yMax + 0.001; gv += step) svg += '<line class="hs-grid" x1="' + mL + '" x2="' + (W - mR) + '" y1="' + Y(gv).toFixed(1) + '" y2="' + Y(gv).toFixed(1) + '"/><text x="' + (mL - 6) + '" y="' + (Y(gv) + 3.5).toFixed(1) + '" text-anchor="end">' + fmtK(gv) + '</text>';
+      var mon = ['ינו׳', 'פבר׳', 'מרץ', 'אפר׳', 'מאי', 'יוני', 'יולי', 'אוג׳', 'ספט׳', 'אוק׳', 'נוב׳', 'דצמ׳'], d0 = new Date(hsT0), months = [];
+      for (var my = d0.getUTCFullYear(), mm = d0.getUTCMonth() + 1; Date.UTC(my, mm, 1) <= hsEnd; mm++) { if (mm > 11) { mm = 0; my++; } months.push([my, mm]); if (months.length > 60) break; }
+      var everyN = Math.max(1, Math.ceil(months.length / 8));
+      months.forEach(function (m, k) {
+        var mx = mL + (Date.UTC(m[0], m[1], 1) - hsT0) / (hsT1 - hsT0) * pw;
+        svg += '<line class="hs-grid" x1="' + mx.toFixed(1) + '" x2="' + mx.toFixed(1) + '" y1="' + (Hh - mB) + '" y2="' + (Hh - mB + 4) + '"/>' + (k % everyN === 0 ? '<text x="' + mx.toFixed(1) + '" y="' + (Hh - 8) + '" text-anchor="middle">' + mon[m[1]] + (m[1] === 0 ? ' ' + String(m[0]).slice(2) : '') + '</text>' : '');
+      });
+      svg += '<path class="hs-invl" d="' + stepPath + '"/><path class="hs-spy" d="' + path(S.alt) + '"/><path class="hs-basket" d="' + path(S.val) + '"/>';
+      var labels = [{ k: 'בפועל', v: V, y: Y(V), strong: true, col: 'var(--series-7)' }, { k: 'S&amp;P 500', v: A, y: Y(A), col: 'var(--text-secondary)' }, { k: 'הושקע נטו', v: I, y: Y(I), col: 'var(--text-muted)' }];
+      labels.sort(function (a, b) { return a.y - b.y; });
+      var ly = labels.map(function (l) { return l.y; });
+      for (var li = 1; li < ly.length; li++) { if (ly[li] - ly[li - 1] < 27) ly[li] = ly[li - 1] + 27; }
+      var shift = Math.max(0, ly[ly.length - 1] - (Hh - mB - 8)); ly = ly.map(function (y) { return y - shift; });
+      labels.forEach(function (l, idx) {
+        svg += '<circle class="hs-ring" cx="' + X(last).toFixed(1) + '" cy="' + l.y.toFixed(1) + '" r="4" fill="' + l.col + '"/><text class="' + (l.strong ? 'hs-lbl-strong' : '') + '" x="' + (X(last) + 9).toFixed(1) + '" y="' + (ly[idx] - 1).toFixed(1) + '">' + l.k + '</text><text x="' + (X(last) + 9).toFixed(1) + '" y="' + (ly[idx] + 11).toFixed(1) + '">' + (ils ? '₪' : '$') + (l.v / 1000).toFixed(1) + 'K</text>';
+      });
+      svg += '<line id="hsCur" class="hs-grid" style="stroke:var(--text-muted)" x1="0" x2="0" y1="' + mT + '" y2="' + (Hh - mB) + '" visibility="hidden"/><circle id="hsDotS" class="hs-ring" r="4" fill="var(--text-secondary)" visibility="hidden"/><circle id="hsDotB" class="hs-ring" r="4" fill="var(--series-7)" visibility="hidden"/><circle id="hsDotI" class="hs-ring" r="3.5" fill="var(--text-muted)" visibility="hidden"/><rect id="hsHit" x="' + mL + '" y="' + mT + '" width="' + pw + '" height="' + ph + '" fill="transparent" style="touch-action:pan-y"/></svg><div class="hs-tip" id="hsTip"></div>';
+      var wrap = $('hsChart'); wrap.innerHTML = svg;
+      var svgEl = wrap.querySelector('svg'), tip = $('hsTip'), cur = $('hsCur'), dotS = $('hsDotS'), dotB = $('hsDotB'), dotI = $('hsDotI');
+      function hover(clientX) {
+        var r = svgEl.getBoundingClientRect(), x = (clientX - r.left) / r.width * W, tt = hsT0 + (x - mL) / pw * (hsT1 - hsT0), i = 0, best = Infinity;
+        for (var j = 0; j < N; j++) { var dj = Math.abs(tOf(dates[j]) - tt); if (dj < best) { best = dj; i = j; } }
+        cur.setAttribute('x1', X(i)); cur.setAttribute('x2', X(i));
+        dotS.setAttribute('cx', X(i)); dotS.setAttribute('cy', Y(S.alt[i])); dotB.setAttribute('cx', X(i)); dotB.setAttribute('cy', Y(S.val[i])); dotI.setAttribute('cx', X(i)); dotI.setAttribute('cy', Y(S.inv[i]));
+        [cur, dotS, dotB, dotI].forEach(function (e) { e.setAttribute('visibility', 'visible'); });
+        tip.innerHTML = '<b dir="ltr">' + hDate(i) + '.' + dates[i].slice(0, 4) + '</b><br>בפועל: <span dir="ltr">' + fmtCur(S.val[i]) + '</span><br><span dir="ltr">S&amp;P 500: ' + fmtCur(S.alt[i]) + '</span><br>הושקע נטו: <span dir="ltr">' + fmtCur(S.inv[i]) + '</span>';
+        tip.style.display = 'block';
+        var px = X(i) / W * r.width, tw = tip.offsetWidth; tip.style.left = (px > r.width / 2 ? px - tw - 12 : px + 12) + 'px';
+      }
+      function leave() { tip.style.display = 'none'; [cur, dotS, dotB, dotI].forEach(function (e) { e.setAttribute('visibility', 'hidden'); }); }
+      var hit = $('hsHit'); hit.addEventListener('pointermove', function (e) { hover(e.clientX); }); hit.addEventListener('pointerdown', function (e) { hover(e.clientX); }); hit.addEventListener('pointerleave', leave);
+      var gaps = S.val.map(function (v, i) { return v - S.alt[i]; }), iMax = 0, iMin = 0;
+      gaps.forEach(function (v, i) { if (v > gaps[iMax]) iMax = i; if (v < gaps[iMin]) iMin = i; });
+      $('hsGap').textContent = 'הפער הטוב ביותר לטובת המניות: ' + fmtSgn(gaps[iMax]) + ' ב-' + hDate(iMax) + '. הפער הגרוע ביותר: ' + fmtSgn(gaps[iMin]) + ' ב-' + hDate(iMin) + '.';
+      $('hsTable').innerHTML = '<table class="data-table"><thead><tr><th>תאריך</th><th class="num">שווי בפועל</th><th class="num">אותם סכומים ב-S&amp;P</th><th class="num">הושקע נטו</th><th class="num">פער</th></tr></thead><tbody>' + dates.map(function (k, i) {
+        return '<tr><td><span dir="ltr">' + hDate(i) + '.' + k.slice(0, 4) + '</span></td><td class="num"><span dir="ltr">' + fmtCur(S.val[i]) + '</span></td><td class="num"><span dir="ltr">' + fmtCur(S.alt[i]) + '</span></td><td class="num"><span dir="ltr">' + fmtCur(S.inv[i]) + '</span></td><td class="num"><span dir="ltr" style="color:' + bmColor(S.val[i] - S.alt[i]) + '">' + fmtSgn(S.val[i] - S.alt[i]) + '</span></td></tr>';
+      }).reverse().join('') + '</tbody></table>';
+      $('hsTrades').innerHTML = '<table class="data-table"><thead><tr><th>תאריך</th><th>מניה</th><th>פעולה</th><th class="num">כמות</th><th class="num">מחיר</th><th class="num">סכום</th></tr></thead><tbody>' + trades.map(function (t) {
+        return '<tr><td><span dir="ltr">' + isoDm(t[0]) + '.' + t[0].slice(0, 4) + '</span></td><td>' + esc(t[1]) + '</td><td>' + (t[2] === 'B' ? 'קנייה' : 'מכירה') + '</td><td class="num">' + t[3] + '</td><td class="num">' + fmtUsd(t[4]) + '</td><td class="num">' + fmtUsd(t[3] * t[4]) + '</td></tr>';
+      }).join('') + '</tbody></table>';
+      $('hsNote').textContent = 'הגרף בנוי מהקניות והמכירות שהזנת. הקו "S&P 500" מראה מה היה שווה הכסף אילו בכל קנייה שלך היה מושקע באותו סכום ב-S&P 500. בתצוגת השקלים כל קנייה מומרת לפי שער הדולר באותו יום, ושווי נוכחי לפי השער של כל נקודה. הנתונים בלי דיבידנדים, עמלות ומס רווחי הון.' +
+        (skipped.length ? ' פעולות במניות שאין להן עדיין נתוני מחיר לא נכללו: ' + skipped.join(', ') + '.' : '') + ' זו מדידה ולא ייעוץ השקעות.';
+    }
+    draw();
+    return true;
+  }
+  $('hsBtnIls').addEventListener('click', function () { hsMode = 'ils'; $('hsBtnIls').setAttribute('aria-pressed', 'true'); $('hsBtnUsd').setAttribute('aria-pressed', 'false'); render(); });
+  $('hsBtnUsd').addEventListener('click', function () { hsMode = 'usd'; $('hsBtnUsd').setAttribute('aria-pressed', 'true'); $('hsBtnIls').setAttribute('aria-pressed', 'false'); render(); });
+
+  // ---------- הכנסות והוצאות ----------
+  var cfHost = $('cfInputs');
+  function buildCf() {
+    var h = '', c = P.cf;
+    function f(id, label, ph) { return '<label>' + label + '<input type="text" inputmode="decimal" autocomplete="off" data-cf="' + id + '" placeholder="' + ph + '" value="' + esc(c[id]) + '"></label>'; }
+    h += f('income', 'הכנסה נטו בחודש (משכורת + הכנסות אחרות)', '₪ לחודש');
+    CF_CATS.forEach(function (x) { h += f(x[0], x[1], '₪ לחודש'); });
+    h += f('extra', 'יתרה בעו"ש / פיקדון נזיל (אופציונלי)', '₪');
+    h += '<label>יעד כרית ביטחון<select data-cf="target">' + [3, 6, 9, 12].map(function (m) { return '<option value="' + m + '"' + (String(m) === c.target ? ' selected' : '') + '>' + m + ' חודשי הוצאות</option>'; }).join('') + '</select></label>';
+    cfHost.innerHTML = h;
+  }
+  function renderCf() {
+    var c = P.cf, C = lastC || compute(), income = nz(c.income), extra = nz(c.extra), target = parseInt(c.target, 10) || 6;
+    var rows = CF_CATS.map(function (x) { return { name: x[1].replace(/ \(.*\)/, ''), v: nz(c[x[0]]) }; });
+    var exp = rows.reduce(function (a, r) { return a + r.v; }, 0), left = income - exp;
+    var liquid = C.cash + C.mmf + extra, months = exp > 0 ? liquid / exp : null, rt = income > 0 ? left / income : null;
+    var t = '';
+    t += tile('נשאר להשקעה בחודש', (income > 0 && exp > 0) ? (left < 0 ? '-' : '') + fmtNis(Math.abs(left)) : '-', left < 0 && income > 0 && exp > 0 ? 'ההוצאות גבוהות מההכנסה' : 'הכנסה פחות הוצאות');
+    t += tile('שיעור חיסכון', rt !== null && exp > 0 ? (rt * 100).toFixed(0) + '%' : '-', 'מתוך ההכנסה נטו');
+    t += tile('כרית ביטחון', months !== null ? months.toFixed(1) + ' חודשים' : '-', 'נזיל ' + fmtNis(liquid));
+    t += tile('הוצאות בחודש', exp > 0 ? fmtNis(exp) : '-', 'סך הקטגוריות');
+    $('cfTiles').innerHTML = t;
+    var sorted = rows.filter(function (r) { return r.v > 0; }).sort(function (a, b) { return b.v - a.v; }), max = sorted.length ? sorted[0].v : 1;
+    $('cfBars').innerHTML = sorted.length ? sorted.map(function (r) { return '<div class="cf-bar"><span>' + r.name + '</span><div class="track"><div class="fill" style="width:' + (r.v / max * 100).toFixed(1) + '%"></div></div><span class="val">' + fmtNis(r.v) + ' <small>' + (r.v / exp * 100).toFixed(0) + '%</small></span></div>'; }).join('') : '<p class="rate-note" style="margin:0">הזן הוצאות בקטגוריות כדי לראות את הפירוט.</p>';
+    var link;
+    if (exp <= 0) link = '<b>הקשר לאג"ח:</b> אחרי שתזין הוצאות, הכלי יראה כמה מהכסף הנזיל הוא כרית ביטחון, וכמה מעבר לה. כרית הביטחון מתאימה לקרן כספית או לפיקדון, והכסף שמעבר לה הוא זה ששאלת האג"ח (קצר, בינוני או ארוך) רלוונטית אליו.';
+    else {
+      var need = target * exp, gap2 = liquid - need;
+      link = gap2 >= 0
+        ? '<b>הקשר לאג"ח:</b> יעד של ' + target + ' חודשי הוצאות הוא ' + fmtNis(need) + ', והנזיל שלך (' + fmtNis(liquid) + ') מעליו ב-' + fmtNis(gap2) + '. הכרית נשארת בקרן כספית. רק הסכום שמעבר לה, ועוד ' + fmtNis(Math.max(left, 0)) + ' בחודש, הוא הכסף שאפשר לשקול לאג"ח לפי אופק ההשקעה.'
+        : '<b>הקשר לאג"ח:</b> יעד של ' + target + ' חודשי הוצאות הוא ' + fmtNis(need) + ', והנזיל שלך (' + fmtNis(liquid) + ') נמוך ממנו ב-' + fmtNis(-gap2) + '. לפי הנתונים האלה, הכסף הנזיל כולו הוא כרית ולא כסף לאג"ח, וההשלמה היא ' + (left > 0 ? 'כ-' + Math.ceil(-gap2 / left) + ' חודשי חיסכון' : 'דבר שדורש שההכנסה תעלה על ההוצאות') + '.';
+    }
+    $('cfLink').innerHTML = link;
+    $('cfNote').textContent = 'כסף נזיל בכרית: קרן כספית ' + fmtNis(C.mmf) + ', מזומן ' + fmtNis(C.cash) + (extra > 0 ? ', ועו"ש/פיקדון ' + fmtNis(extra) : '') + '. קרנות השתלמות וגמל לא נספרות כי הן לא נגישות בלי קנס או אובדן הטבת מס. הוצאות שנתיות גדולות (ביטוח, ארנונה, חופשה): חלק ב-12 והוסף לקטגוריה המתאימה. זה כלי חישוב ולא ייעוץ השקעות.';
+  }
+  cfHost.addEventListener('input', function (e) { var k = e.target.getAttribute('data-cf'); if (!k) return; P.cf[k] = e.target.value; scheduleSave(); renderCf(); });
+  $('cfClear').addEventListener('click', function () { var d = blank().cf; P.cf = d; buildCf(); scheduleSave(); renderCf(); });
+
+  // ---------- פתיחה וסנכרון ----------
+  buildEditor(); buildCf(); render();
+  (async function () {
+    var ref = await getRef();
+    if (!ref) { setStatus('שמירה במכשיר זה בלבד (סנכרון לחשבון לא זמין בצפייה הזו).'); return; }
+    var snap = await ref.get(), remote = null;
+    if (snap && snap.exists) { try { remote = clean(JSON.parse(snap.data().profile)); } catch (e) { remote = null; } }
+    var lt = P.updatedAt || 0, rt = remote ? (remote.updatedAt || 0) : 0;
+    if (remote && rt > lt) { P = remote; writeLocal(); buildEditor(); buildCf(); render(); setStatus('נטענו נתונים מהחשבון שלך.'); }
+    else if (lt > rt) { var ok = await pushRemote(); setStatus(ok ? 'מסונכרן לחשבון שלך.' : ''); }
+    else if (lt > 0) setStatus('מסונכרן לחשבון שלך.');
+  })().catch(function () {});
+})();
+</script>

@@ -1,0 +1,3 @@
+#!/bin/sh
+# Blocks commits that stage private financial data.
+exec node scripts/guard-personal-data.mjs --staged

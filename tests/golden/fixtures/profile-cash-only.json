@@ -1,0 +1,26 @@
+{
+  "fx": "",
+  "cashUsd": "1500",
+  "cashNis": "12000",
+  "mmf": "30000",
+  "tradeRate": "6",
+  "eqTarget": "70",
+  "rows": [],
+  "gemel": [],
+  "hish": [],
+  "trades": [],
+  "cf": {
+    "income": "",
+    "extra": "",
+    "target": "6",
+    "rent": "",
+    "food": "",
+    "out": "",
+    "car": "",
+    "bills": "",
+    "kids": "",
+    "health": "",
+    "other": ""
+  },
+  "updatedAt": 0
+}
