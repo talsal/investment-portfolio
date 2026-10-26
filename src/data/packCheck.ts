@@ -1,5 +1,6 @@
 import type { MarketData } from '../calc/types';
 import { dmyToIso } from './pack';
+import { expectedUsClose } from './tradingDay';
 
 /** A price that moved more than this since the reference is shown as suspicious (not blocked). */
 export const JUMP_PCT = 25;
@@ -28,6 +29,8 @@ export interface PackCheck {
   extra: number;
   asofIso: string | null; ageDays: number | null;
   noDate: boolean; stale: boolean; future: boolean;
+  /** The latest US session that should already be published, when the answer's date is older than it (null otherwise). */
+  behindMarket: string | null;
   fx: { value: number; ref: number; jump: boolean } | null;
   /** True when nothing needs the user's attention. */
   clean: boolean;
@@ -78,9 +81,13 @@ export function checkPack(i: PackCheckInput): PackCheck {
   const stale = ageDays !== null && ageDays > STALE_DAYS;
   const future = ageDays !== null && ageDays < -1;
 
+  const expected = expectedUsClose(i.today);
+  const hasUs = Object.values(i.pack.tickers).some((t) => (t.cur ?? 'USD') === 'USD');
+  const behindMarket = hasUs && asofIso && !future && asofIso < expected ? expected : null;
+
   const fxRef = i.typedFx ?? i.previous?.fx ?? null;
   const fx = i.pack.fx && fxRef ? { value: i.pack.fx, ref: fxRef, jump: Math.abs((i.pack.fx - fxRef) / fxRef) * 100 > FX_JUMP_PCT } : null;
 
-  const clean = !rows.some((r) => r.jump || r.curMismatch) && !missing.length && !rejected.length && !noDate && !stale && !future && !fx?.jump;
-  return { rows, missing, rejected, dropped, extra, asofIso, ageDays, noDate, stale, future, fx, clean };
+  const clean = !rows.some((r) => r.jump || r.curMismatch) && !missing.length && !rejected.length && !noDate && !stale && !future && !behindMarket && !fx?.jump;
+  return { rows, missing, rejected, dropped, extra, asofIso, ageDays, noDate, stale, future, behindMarket, fx, clean };
 }

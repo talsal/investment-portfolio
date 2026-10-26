@@ -142,6 +142,20 @@ test.describe('guided data update', () => {
     await close();
   });
 
+  test('an answer older than the latest published US close is called out, with the reason it can still be fine', async ({ browser }) => {
+    const { page, close } = await openApp(browser, { profile: { rows: [rows[0]] }, pack, files: emptySite() }); // clock: Friday 23.10.2026, before the US open
+    await openAsk(page);
+    expect(await page.inputValue('#paPrompt')).toMatch(/התאריך והשעה עכשיו: 23\.10\.2026, יום שישי, \d\d:\d\d/);
+    await page.fill('#paPaste', answer({ asof: '21.10.2026', tickers: { ALFA: { price: 52 } } }));
+    await page.click('#paCheck');
+    await expect(page.locator('#pvWarns')).toContainText('כבר יש סגירה חדשה יותר של שוק ארה״ב (22.10.2026)');
+    await expect(page.locator('#pvWarns')).toContainText('חג');
+    await page.fill('#paPaste', answer({ asof: '22.10.2026', tickers: { ALFA: { price: 52 } } }));
+    await page.click('#paCheck');
+    await expect(page.locator('#pvWarns')).not.toContainText('סגירה חדשה יותר');
+    await close();
+  });
+
   test('fits a 360px phone screen with the preview open (no horizontal page scroll)', async ({ browser }) => {
     const { page, close } = await openApp(browser, { profile: { rows }, pack, files: emptySite(), viewport: { width: 360, height: 780 } });
     await openAsk(page);

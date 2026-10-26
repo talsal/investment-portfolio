@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { checkPack, JUMP_PCT, STALE_DAYS } from '../../src/data/packCheck';
 import { parsePackText, sanitizePack } from '../../src/data/pack';
+import { expectedUsClose } from '../../src/data/tradingDay';
 import { packWants } from '../../src/data/packTickers';
 import { he } from '../../src/i18n/he';
 import { profile, row } from './helpers';
@@ -131,5 +132,39 @@ describe('checkPack', () => {
     const previous = pk({ tickers: { AAA: { price: 10 } } });
     const r = checkPack(input({ asof: '26.10.2026', tickers: { AAA: { price: 10.4 } } }, { wanted: ['AAA'], previous }));
     expect(r.clean).toBe(true);
+  });
+});
+
+describe('expectedUsClose (the latest US session that should already be published)', () => {
+  const at = (iso: string) => expectedUsClose(new Date(iso));
+  it('uses today once the session has closed, and the previous weekday before the close', () => {
+    expect(at('2026-10-26T21:00:00Z')).toBe('2026-10-26');  // Monday 17:00 New York (summer time): closed
+    expect(at('2026-10-26T20:10:00Z')).toBe('2026-10-23');  // Monday 16:10: inside the publishing allowance, still Friday
+    expect(at('2026-10-26T14:00:00Z')).toBe('2026-10-23');  // Monday 10:00: open, last close is Friday
+  });
+  it('rolls weekends back to Friday and a Tuesday morning back to Monday', () => {
+    expect(at('2026-10-24T18:00:00Z')).toBe('2026-10-23');  // Saturday
+    expect(at('2026-10-25T18:00:00Z')).toBe('2026-10-23');  // Sunday
+    expect(at('2026-10-27T08:00:00Z')).toBe('2026-10-26');  // Tuesday 04:00 New York
+  });
+  it('follows New York time across the daylight-saving change', () => {
+    expect(at('2026-11-03T21:30:00Z')).toBe('2026-11-03');  // Tuesday 16:30 EST
+    expect(at('2026-11-03T21:20:00Z')).toBe('2026-11-02');  // 16:20 EST: not yet
+  });
+});
+
+describe('checkPack: answer older than the latest published close', () => {
+  const answer = (asof: string) => ({ asof, tickers: { AAA: { price: 10 } } });
+  const now = new Date('2026-10-26T20:09:00Z'); // Monday 23:09 in Israel (winter time), 16:09 in New York (summer time)
+  const later = new Date('2026-10-26T21:09:00Z'); // an hour later: the close is published
+  it('flags Friday data after Monday\'s close, and accepts it before', () => {
+    expect(checkPack(input(answer('23.10.2026'), { today: later })).behindMarket).toBe('2026-10-26');
+    expect(checkPack(input(answer('23.10.2026'), { today: later })).clean).toBe(false);
+    expect(checkPack(input(answer('23.10.2026'), { today: now })).behindMarket).toBeNull();
+    expect(checkPack(input(answer('26.10.2026'), { today: later })).behindMarket).toBeNull();
+  });
+  it('does not apply to an answer with no dollar entries', () => {
+    const raw = { asof: '23.10.2026', tickers: { '111': { price: 10, cur: 'ILS' } } };
+    expect(checkPack(input(raw, { today: later })).behindMarket).toBeNull();
   });
 });

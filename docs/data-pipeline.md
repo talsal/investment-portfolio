@@ -114,7 +114,7 @@ securities also the number and the name the user typed, the currency each row is
 today's date, which the user pastes into their own assistant. The answer is pasted back (or imported from a file) and goes through
 `parsePackText` (bare JSON, a fenced block, or JSON inside a sentence), the strict `sanitizePack`, and `checkPack`
 (`src/data/packCheck.ts`) before anything is applied. The preview shows each price against the previous pack or the price
-the user typed, and flags: a move above `JUMP_PCT` (25%), data older than `STALE_DAYS` (7), a missing or future date, a
+the user typed, and flags: a move above `JUMP_PCT` (25%), data older than `STALE_DAYS` (7), a missing or future date, an answer dated before the latest US session that should already be published (computed from New York time, weekdays only, so on a market holiday the note says it can still be fine), a
 dollar rate that moved more than 5%, requested tickers that did not arrive, entries the reader rejected, a price quoted
 in a currency other than the row's, a ratio near 100 against the previous price (agorot mixed up with shekels), and tickers that exist in the old pack but would disappear. Nothing is applied until the user confirms, and the
 site sends nothing: the user copies and pastes. Thresholds are sanity checks, not calculation rules.

@@ -14,6 +14,13 @@ export interface PackUpdateHooks {
 }
 
 const dmy = (d: Date): string => `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}.${d.getFullYear()}`;
+/** Date, weekday and local time with the time zone, so the assistant knows whether the US market has closed today. */
+const stamp = (d: Date): string => {
+  let zone = '';
+  try { zone = Intl.DateTimeFormat().resolvedOptions().timeZone; } catch { /* unknown zone: leave it out */ }
+  return `${dmy(d)}, ${d.toLocaleDateString('he-IL', { weekday: 'long' })}, ${d.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit', hour12: false })}${zone ? ` (${zone})` : ''}`;
+};
+const isoToDmy = (iso: string): string => `${iso.slice(8, 10)}.${iso.slice(5, 7)}.${iso.slice(0, 4)}`;
 const pct = (n: number): string => `${n > 0 ? '+' : ''}${n.toFixed(1)}%`;
 
 /** The guided update: instructions for the user's own assistant, paste or file in, a checked preview, confirm to apply. */
@@ -29,7 +36,7 @@ export function wirePackUpdate(h: PackUpdateHooks): { open(): void; fromFile(f: 
     const wants = packWants(h.getProfile());
     $('paNone').hidden = wants.length > 0;
     $('paFlow').hidden = wants.length === 0;
-    ($('paPrompt') as HTMLTextAreaElement).value = wants.length ? A.prompt(wants, dmy(h.now())) : '';
+    ($('paPrompt') as HTMLTextAreaElement).value = wants.length ? A.prompt(wants, stamp(h.now())) : '';
     resetPreview();
     msg('');
     $('packAskBox').hidden = false;
@@ -74,6 +81,7 @@ export function wirePackUpdate(h: PackUpdateHooks): { open(): void; fromFile(f: 
     if (res.noDate) add(W.noDate);
     if (res.stale && res.ageDays !== null) add(W.stale(res.ageDays));
     if (res.future) add(W.future);
+    if (res.behindMarket) add(W.behind(isoToDmy(res.behindMarket)));
     if (res.fx?.jump) add(W.fx(res.fx.value.toFixed(3), res.fx.ref.toFixed(3)));
     if (res.missing.length) add(W.missing(res.missing.join(', ')));
     if (res.rejected.length) add(W.rejected(res.rejected.join(', ')));
