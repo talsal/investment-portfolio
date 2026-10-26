@@ -37,6 +37,7 @@ jobs:
       - run: npm run build
         env:
           VITE_REPO_URL: https://github.com/${{ github.repository }}
+          VITE_REQUEST_EMAIL: ${{ vars.REQUEST_EMAIL }}
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with: { path: dist }

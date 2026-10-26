@@ -3,6 +3,8 @@ import type { MarketData, Profile } from '../calc/types';
 import { loadExampleBundle } from '../data/legacyPack';
 import { applyPack } from '../data/pack';
 import { DataLoader } from '../data/loader';
+import { buildMailto } from '../data/mailto';
+import { REQUEST_EMAIL } from '../config/site';
 import { he } from '../i18n/he';
 import { blankProfile, sanitizeProfile } from '../profile/schema';
 import { browserDeps } from '../storage/browserDeps';
@@ -124,6 +126,9 @@ export async function startApp(root: HTMLElement): Promise<void> {
     const syms = [...new Set(P.rows.map((r) => r.t.toUpperCase().replace(/\s+/g, '')).filter((t) => t && !M.tickers[t]))];
     show('uncSection', syms.length > 0);
     $('uncList').textContent = syms.join(', ');
+    const to = REQUEST_EMAIL, mailable = to !== null && syms.length > 0;
+    show('uncMail', mailable); show('uncMailHint', mailable);
+    if (to && mailable) ($('uncMail') as HTMLAnchorElement).href = buildMailto(to, he.uncovered.mailSubject, he.uncovered.mailBody(syms.join(', ')));
     if (!syms.length) $('uncMsg').textContent = '';
   }
 

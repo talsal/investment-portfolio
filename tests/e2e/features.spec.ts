@@ -195,6 +195,21 @@ test.describe('uncovered tickers', () => {
     expect(errors).toEqual([]);
     await close();
   });
+  test('the mail button opens a prefilled message with the symbols only, and the site sends nothing itself', async ({ browser }) => {
+    const { page, close } = await openApp(browser, { profile: { rows }, pack });
+    const href = await page.getAttribute('#uncMail', 'href');
+    expect(href).toMatch(/^mailto:requests@example\.test\?subject=/);
+    const body = decodeURIComponent(href!.split('&body=')[1]!);
+    expect(body).toContain('ZZZZ, YYYY2');
+    expect(body).not.toMatch(/\b(q|k|p)\s*[:=]/);
+    await expect(page.locator('#uncMailHint')).toContainText('חושפת את כתובת הדואר');
+    const requests: string[] = [];
+    page.on('request', (r) => requests.push(r.url()));
+    await page.evaluate(() => document.getElementById('uncMail')!.addEventListener('click', (e) => e.preventDefault()));
+    await page.click('#uncMail');
+    expect(requests).toEqual([]);
+    await close();
+  });
   test('is hidden when every held ticker is covered, and when a personal pack covers the rest', async ({ browser }) => {
     const { page, close } = await openApp(browser, { profile: { rows: rows.slice(0, 1) }, pack });
     await expect(page.locator('#uncSection')).toBeHidden();

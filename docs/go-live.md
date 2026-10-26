@@ -21,6 +21,8 @@ it, and the audit below checks the full history).
 6. **Optional, later:**
    - Data: edit `data/universe.json`; set `DATA_LICENSE_ACK` and API keys only if you obtain display rights (see `docs/data-pipeline.md`).
      With nothing configured the site works with prices typed in by users, and the CPI from the CBS.
+   - Ticker requests by mail: set the repository variable `REQUEST_EMAIL` (Settings -> Secrets and variables -> Actions -> Variables) to a
+     dedicated address. It is built into the public site, so do not use your personal one. Without it the mail button is hidden.
    - Analysis: use the free paste-in path (`docs/analysis-pipeline.md`). Do not enable the paid workflow unless you want to.
    - A licence: with no `LICENSE` file the code is "all rights reserved" by default. Add one if you want others to reuse it.
 
