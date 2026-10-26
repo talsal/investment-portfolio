@@ -21,7 +21,7 @@ export interface Rules {
   cashflow: { cushionMonthsOptions: number[]; defaultCushionMonths: number };
   limits: { rows: number; funds: number; trades: number; watchlist: number };
   withdrawal: { timing: 'end-of-month'; maxYears: number };
-  freshness: { staleAfterDays: Record<'fx' | 'quotes' | 'benchmark' | 'calendar' | 'cpi' | 'fundamentals' | 'history' | 'analysis', number> };
+  freshness: { staleAfterDays: Record<'fx' | 'quotes' | 'benchmark' | 'calendar' | 'cpi' | 'fundamentals' | 'history' | 'analysis' | 'pack', number> };
   history: { years: number };
   backup: { nudgeDays: number; snoozeDays: number; maxFileBytes: number };
   currency: { agorotFactor: number };

@@ -28,6 +28,8 @@ export interface Profile {
   cf: CashFlowInput; settings: Settings;
   /** Tickers the user follows without holding them. */
   watchlist: string[];
+  /** Optional personal market-data pack kept inside the user's own file (see src/data/pack.ts). */
+  dataPack: MarketData | null;
   /** Inputs for the sustainable-withdrawal estimate (strings as typed). */
   withdrawal: { years: string; realRate: string };
   updatedAt: number;
@@ -75,4 +77,6 @@ export interface MarketMeta {
   stalePrices: string[];
   cpiAsof: string | null;
   historyAsof: string | null;
+  /** Set when the user's personal data pack is in use (then no site provenance applies). */
+  personalPack?: { asof: string | null };
 }

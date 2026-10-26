@@ -1,7 +1,7 @@
 import type { MarketData } from '../calc/types';
 import { RULES } from '../config/rules';
 
-export type FreshId = 'fx' | 'quotes' | 'benchmark' | 'calendar' | 'cpi' | 'fundamentals' | 'history' | 'analysis';
+export type FreshId = 'pack' | 'fx' | 'quotes' | 'benchmark' | 'calendar' | 'cpi' | 'fundamentals' | 'history' | 'analysis';
 export type FreshLevel = 'ok' | 'stale' | 'unavailable' | 'missing';
 
 export interface FreshnessItem {
@@ -41,6 +41,7 @@ export function freshness(M: MarketData, now: Date, heldSymbols: string[] = []):
   const meta = M.meta;
   if (!meta) return [];
   const out: FreshnessItem[] = [];
+  if (meta.personalPack) return [item('pack', now, null, meta.personalPack.asof, null)];
   for (const id of ['quotes', 'fx', 'benchmark', 'calendar'] as const) {
     const g = meta.groups[id];
     if (g) out.push(item(id, now, g.state, g.asof, g.source, g.note));

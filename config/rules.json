@@ -100,7 +100,8 @@
       "cpi": 50,
       "fundamentals": 120,
       "history": 7,
-      "analysis": 200
+      "analysis": 200,
+      "pack": 4
     }
   },
   "history": {

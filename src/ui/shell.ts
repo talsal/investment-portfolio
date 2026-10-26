@@ -109,6 +109,11 @@ function storageCard(): Raw {
       <div class="in-btns"><button type="button" class="toggle-btn" id="ipConfirm">${he.storage.preview.confirm}</button><button type="button" class="toggle-btn" id="ipCancel">${he.storage.preview.cancel}</button></div>
     </div>
     <p class="in-msg" id="stMsg" role="status"></p>
+    <h2 class="card-h">${he.pack.h}</h2>
+    <p class="in-hint">${he.pack.hint}</p>
+    <p class="in-hint b" id="packStatus"></p>
+    <div class="in-btns"><button type="button" class="toggle-btn" id="packImport">${he.pack.import}</button><input type="file" id="packFile" accept=".json,application/json" hidden aria-label="${he.pack.import}"><button type="button" class="toggle-btn" id="packRemove">${he.pack.remove}</button></div>
+    <p class="in-msg" id="packMsg" role="status"></p>
     <h2 class="card-h">${K.eraseH}</h2>
     <div class="in-btns"><button type="button" class="toggle-btn" id="stErase">${K.erase}</button></div>
   </details>`;

@@ -1,9 +1,11 @@
 import { test, expect } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 import { openApp } from './appHarness';
+import { packToFiles } from '../support/dataFiles';
 
 const fx = (n: string) => JSON.parse(readFileSync(`tests/golden/fixtures/${n}.json`, 'utf8'));
 const pack = fx('pack-fake');
+const base = () => structuredClone(packToFiles(pack)) as Record<string, any>;
 
 test.describe('watchlist (user-owned)', () => {
   test('add, analyse, de-duplicate, remove and persist', async ({ browser }) => {
@@ -97,4 +99,75 @@ test('the glossary opens and closes like the other collapsible sections (starts 
   await page.locator('#glossarySection > summary').click();
   await expect(page.locator('#glossarySection dl')).toBeHidden();
   await close();
+});
+
+test.describe('personal data pack', () => {
+  const emptySite = () => { const f = base(); for (const k of Object.keys(f)) if (k !== 'cpi.json') delete f[k]; f['market.json'] = { schema: 1, generatedAt: 'x', groups: {}, tickers: {} }; return f; };
+  const packFile = () => ({ name: 'pack.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(pack)) });
+  const rows = [{ n: 'A', t: 'ALFA', c: 'USD', ty: 'eq', q: '10', k: '50', p: '' }, { n: 'B', t: 'BETA', c: 'USD', ty: 'eq', q: '5', k: '100', p: '' }];
+
+  test('with no site data at all, importing a pack gives the full analysis, labelled as the personal pack', async ({ browser }) => {
+    const { page, errors, close } = await openApp(browser, { profile: { rows }, pack, files: emptySite() });
+    await expect(page.locator('#bfSection')).toBeHidden();
+    await page.locator('#storageCard summary').click();
+    await page.locator('#packFile').setInputFiles(packFile());
+    await expect(page.locator('#packMsg')).toContainText('החבילה נטענה');
+    await expect(page.locator('#bfSection')).toBeVisible();
+    await expect(page.locator('#bfTable')).toContainText('ALFA');
+    await expect(page.locator('#bmSection')).toBeVisible();
+    await expect(page.locator('#hsSection')).toBeHidden(); // no trades entered
+    await expect(page.locator('#packStatus')).toContainText('חבילה אישית פעילה');
+    await page.locator('#freshness summary').click();
+    await expect(page.locator('#freshList')).toContainText('חבילת הנתונים האישית שלך');
+    expect(errors).toEqual([]);
+    await close();
+  });
+
+  test('blank prices show the automatic price as a placeholder and use it', async ({ browser }) => {
+    const { page, close } = await openApp(browser, { profile: { rows, dataPack: pack }, pack, files: emptySite() });
+    const expected = (pack.tickers.ALFA.price as number).toFixed(2);
+    await expect(page.locator('[data-g="rows"][data-i="0"][data-f="p"]')).toHaveAttribute('placeholder', new RegExp(`${expected.replace('.', '\\.')}.*\\(אוטומטי\\)`));
+    const total = 10 * pack.tickers.ALFA.price + 5 * pack.tickers.BETA.price;
+    await expect(page.locator('#totUsd')).toContainText(Math.floor(total).toLocaleString('en-US'));
+    await close();
+  });
+
+  test('the pack is saved inside the profile, survives reload, and can be removed', async ({ browser }) => {
+    const { page, close } = await openApp(browser, { profile: { rows }, pack, files: emptySite() });
+    await page.locator('#storageCard summary').click();
+    await page.locator('#packFile').setInputFiles(packFile());
+    await expect(page.locator('#bfSection')).toBeVisible();
+    await page.waitForTimeout(800);
+    await page.reload();
+    await expect(page.locator('#bfSection')).toBeVisible();
+    await page.locator('#storageCard summary').click();
+    await page.click('#packRemove');
+    await expect(page.locator('#bfSection')).toBeHidden();
+    await expect(page.locator('#packStatus')).toContainText('אין חבילה אישית');
+    await close();
+  });
+
+  test('a pack that is not a pack is refused with a message and changes nothing', async ({ browser }) => {
+    const { page, close } = await openApp(browser, { profile: { rows }, pack, files: emptySite() });
+    await page.locator('#storageCard summary').click();
+    await page.locator('#packFile').setInputFiles({ name: 'x.json', mimeType: 'application/json', buffer: Buffer.from('{"hello":1}') });
+    await expect(page.locator('#packMsg')).toContainText('אינו חבילת נתונים תקינה');
+    await page.locator('#packFile').setInputFiles({ name: 'x.json', mimeType: 'application/json', buffer: Buffer.from('nope') });
+    await expect(page.locator('#packMsg')).toContainText('אינו JSON תקין');
+    await expect(page.locator('#packStatus')).toContainText('אין חבילה אישית');
+    await close();
+  });
+
+  test('in file mode the pack goes into the exported file and into nothing stored in the browser', async ({ browser }) => {
+    const { page, close } = await openApp(browser, { profile: {}, pack, mode: 'file', seed: false, files: emptySite() });
+    await page.click('#gateNew');
+    await page.locator('#storageCard summary').click();
+    await page.locator('#packFile').setInputFiles(packFile());
+    await expect(page.locator('#packStatus')).toContainText('חבילה אישית פעילה');
+    expect(await page.evaluate(() => Object.keys(localStorage).sort())).toEqual(['portfolio.mode']);
+    const [dl] = await Promise.all([page.waitForEvent('download'), page.click('#stExport')]);
+    const o = JSON.parse(readFileSync((await dl.path()) as string, 'utf8'));
+    expect(Object.keys(o.profile.dataPack.tickers).sort()).toEqual(Object.keys(pack.tickers).sort());
+    await close();
+  });
 });

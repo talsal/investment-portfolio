@@ -1,6 +1,7 @@
 import { compute } from '../calc/portfolio';
 import type { MarketData, Profile } from '../calc/types';
 import { loadExampleBundle } from '../data/legacyPack';
+import { applyPack, MAX_PACK_CHARS, sanitizePack } from '../data/pack';
 import { DataLoader } from '../data/loader';
 import { he } from '../i18n/he';
 import { blankProfile, sanitizeProfile } from '../profile/schema';
@@ -34,7 +35,14 @@ export async function startApp(root: HTMLElement): Promise<void> {
   const previewDrafts = new URLSearchParams(location.search).get('drafts') === '1';
   const loader = new DataLoader('./data/', undefined, previewDrafts);
   let exampleMarket: MarketData | null = null;
-  const market = (): MarketData => (P.settings.example && exampleMarket ? exampleMarket : loader.market());
+  let overlay: { base: MarketData; pack: MarketData; out: MarketData } | null = null;
+  const market = (): MarketData => {
+    const base = P.settings.example && exampleMarket ? exampleMarket : loader.market();
+    const pack = P.dataPack;
+    if (!pack || (P.settings.example && exampleMarket)) return base;
+    if (!overlay || overlay.base !== base || overlay.pack !== pack) overlay = { base, pack, out: applyPack(base, pack) };
+    return overlay.out;
+  };
 
   /** Loads per-ticker data files for what the user holds, traded or follows; re-renders when something new arrived. */
   function ensureData() {
@@ -74,10 +82,29 @@ export async function startApp(root: HTMLElement): Promise<void> {
     show('anaTitle', any);
     renderCashFlow(ctx);
     renderFreshness(ctx);
+    renderPackStatus(M);
+    fillPricePlaceholders(ctx);
     markScrollRegions();
     $('demoNotice').hidden = !M.demo;
     $('draftBanner').hidden = !previewDrafts;
     performance.measure('render', 'render:start');
+  }
+
+  function renderPackStatus(M: MarketData) {
+    const n = P.dataPack ? Object.keys(P.dataPack.tickers).length : 0;
+    $('packStatus').textContent = P.dataPack ? he.pack.active(n, P.dataPack.asof ?? '') : he.pack.none;
+    $('packRemove').hidden = !P.dataPack;
+    void M;
+  }
+
+  /** A blank price shows the automatic price (from the data) as a placeholder, so nothing looks missing. */
+  function fillPricePlaceholders({ C, M }: Ctx) {
+    document.querySelectorAll<HTMLInputElement>('[data-g="rows"][data-f="p"]').forEach((el) => {
+      const row = P.rows[Number(el.dataset.i)];
+      const pk = row && row.c === 'USD' ? M.tickers[row.t.toUpperCase().replace(/\s+/g, '')] : undefined;
+      el.placeholder = !row?.p && pk ? he.pack.autoPrice(pk.price.toFixed(2)) : '';
+    });
+    void C;
   }
 
   /** Tables that overflow are keyboard-scrollable regions with a name; those that fit stay out of the tab order. */
@@ -148,6 +175,22 @@ export async function startApp(root: HTMLElement): Promise<void> {
     P.withdrawal[el.dataset.wd as 'years' | 'realRate'] = el.value;
     afterEdit();
   }));
+
+  $('packImport').addEventListener('click', () => $('packFile').click());
+  $('packFile').addEventListener('change', async function (this: HTMLInputElement) {
+    const f = this.files?.[0]; this.value = '';
+    if (!f) return;
+    const msg = (t: string) => { $('packMsg').textContent = t; };
+    if (f.size > MAX_PACK_CHARS * 1.5) { msg(he.pack.error.invalid); return; }
+    let raw: unknown;
+    try { raw = JSON.parse(await f.text()); } catch { msg(he.pack.error.notJson); return; }
+    const pack = sanitizePack(raw);
+    if (!pack) { msg(he.pack.error.invalid); return; }
+    P.dataPack = pack;
+    msg(he.pack.imported(Object.keys(pack.tickers).length));
+    afterEdit();
+  });
+  $('packRemove').addEventListener('click', () => { P.dataPack = null; $('packMsg').textContent = he.pack.removed; afterEdit(); });
 
   $('btnExample').addEventListener('click', async () => {
     const ex = await loadExampleBundle();

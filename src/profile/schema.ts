@@ -1,6 +1,7 @@
 import { CF_CATS, type AssetType, type CashFlowInput, type Currency, type Profile } from '../calc/types';
 import { numStr } from '../calc/num';
 import { RULES } from '../config/rules';
+import { sanitizePack } from '../data/pack';
 
 const TYPES: Record<string, true> = { eq: true, bond: true, other: true };
 const txt = (v: unknown, n: number): string => (typeof v === 'string' ? v.slice(0, n) : '');
@@ -15,7 +16,7 @@ export function blankProfile(): Profile {
   return {
     fx: '', cashUsd: '', cashNis: '', mmf: '', mmfCost: '', tradeRate: '', eqTarget: '',
     rows: [], gemel: [], hish: [], trades: [], cf: blankCashFlow(), settings: { benchmarkDate: '', example: false },
-    watchlist: [], withdrawal: { years: '', realRate: '' }, updatedAt: 0,
+    watchlist: [], dataPack: null, withdrawal: { years: '', realRate: '' }, updatedAt: 0,
   };
 }
 
@@ -70,6 +71,7 @@ export function sanitizeProfile(o: unknown): Profile {
     const t = txt(w, 12).trim().toUpperCase().replace(/\s+/g, '');
     if (t && !seen.has(t)) { seen.add(t); P.watchlist.push(t); }
   }
+  P.dataPack = sanitizePack(o.dataPack);
   if (isObj(o.withdrawal)) {
     P.withdrawal.years = numStr(o.withdrawal.years, 0, RULES.withdrawal.maxYears);
     P.withdrawal.realRate = numStr(o.withdrawal.realRate, -50, 100);
