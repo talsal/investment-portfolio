@@ -51,6 +51,11 @@ for (const [name, make] of Object.entries(scenarios)) {
       expect(actual.sections.wlSection?.hidden).toBe((WAIVE_WATCHLIST.get(name) as { hidden: boolean }).hidden);
       delete actual.sections.wlSection; delete expected.sections.wlSection;
     }
+    // Known change: when the dollar rate comes from the data the new subtitle names its source (the reference
+    // always said "default").
+    const sc = make();
+    const packFx = (sc.pack as { fx?: number }).fx;
+    if (packFx && !/הוזן ידנית/.test(expected.subtitle)) expected.subtitle = expected.subtitle.replace('(ברירת מחדל, אפשר לעדכן)', '(בנק ישראל, 22.10.2026)');
     // Compare section by section so a failure points at the section.
     for (const id of Object.keys(expected.sections)) expect(actual.sections[id], id).toEqual(expected.sections[id]);
     expect(actual).toEqual(expected);

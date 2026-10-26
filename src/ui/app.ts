@@ -70,7 +70,7 @@ export async function startApp(root: HTMLElement): Promise<void> {
     const M = market();
     const C = compute(P, M);
     const ctx: Ctx = { P, M, C, now: new Date() };
-    $('subtitle').textContent = C.total > 0 ? he.app.subtitle(C.fx.toFixed(4), C.fxManual, M.asof || '') : he.app.subtitleEmpty;
+    $('subtitle').textContent = C.total > 0 ? he.app.subtitle(C.fx.toFixed(4), fxSource(C.fxManual, M), M.asof || '') : he.app.subtitleEmpty;
     show('outEmpty', !(C.total > 0));
     show('outMain', C.total > 0);
     if (C.total > 0) {
@@ -89,6 +89,17 @@ export async function startApp(root: HTMLElement): Promise<void> {
     $('demoNotice').hidden = !M.demo;
     $('draftBanner').hidden = !previewDrafts;
     performance.measure('render', 'render:start');
+  }
+
+  /** Where the dollar rate in the subtitle comes from, so it is never mislabelled as a default. */
+  function fxSource(manual: boolean, M: MarketData): { kind: 'manual' | 'default' | 'data'; label?: string } {
+    if (manual) return { kind: 'manual' };
+    if (!(M.fx && M.fx > 0)) return { kind: 'default' };
+    const g = M.meta?.groups.fx, F = he.app.fxFrom;
+    const d = (iso: string | null | undefined) => (iso ? `${iso.slice(8, 10)}.${iso.slice(5, 7)}.${iso.slice(0, 4)}` : '');
+    if (M.meta?.personalPack) return { kind: 'data', label: F.pack(d(M.meta.personalPack.asof)) };
+    if (g?.source === 'boi') return { kind: 'data', label: F.boi(d(g.asof)) };
+    return { kind: 'data', label: F.site(d(g?.asof)) };
   }
 
   function renderPackStatus(M: MarketData) {

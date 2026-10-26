@@ -12,6 +12,7 @@ function line(i: FreshnessItem): string {
   const date = i.asof ? fmtAsof(i.asof) : null;
   if (i.level === 'ok') return L.ok(date as string);
   if (i.level === 'stale') return L.stale(date as string, i.ageDays ?? 0);
+  if (i.level === 'inactive') return (i.note && he.freshness.reason[i.note]) || L.missing;
   if (i.level === 'unavailable') { const why = i.note ? he.freshness.reason[i.note] : undefined; return why && !date ? why : L.unavailable(date); }
   return L.missing;
 }
@@ -24,7 +25,7 @@ export function renderFreshness({ M, C, now }: Ctx): void {
   if (!items.length) return;
   const worst = worstLevel(items);
   $('freshSummary').textContent = he.freshness.summary[worst];
-  $('freshSummary').className = worst === 'ok' ? 'c-gain' : worst === 'stale' ? 'c-sec' : 'c-loss';
+  $('freshSummary').className = worst === 'ok' ? 'c-gain' : worst === 'stale' || worst === 'inactive' ? 'c-sec' : 'c-loss';
   const stale = M.meta?.stalePrices ?? [];
   setHtml($('freshList'), html`${items.map((i) => html`<li class="fresh-${i.level}"><span class="fl-name">${he.freshness.label[i.id]}</span><span class="fl-val">${line(i)}${i.source && (he.freshness.source as Record<string, string>)[i.source] ? html` <span class="c-muted">· ${he.freshness.sourceLead}${(he.freshness.source as Record<string, string>)[i.source]}</span>` : ''}</span></li>`)}`);
   const sp = $('freshStale');

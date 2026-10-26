@@ -2,7 +2,8 @@ import type { MarketData } from '../calc/types';
 import { RULES } from '../config/rules';
 
 export type FreshId = 'pack' | 'fx' | 'quotes' | 'benchmark' | 'calendar' | 'cpi' | 'fundamentals' | 'history' | 'analysis';
-export type FreshLevel = 'ok' | 'stale' | 'unavailable' | 'missing';
+/** inactive: this automatic source is simply not switched on (not a failure); the user's own numbers are used. */
+export type FreshLevel = 'ok' | 'stale' | 'unavailable' | 'missing' | 'inactive';
 
 export interface FreshnessItem {
   id: FreshId;
@@ -25,7 +26,10 @@ function ageInDays(asof: string, now: Date): number {
 }
 
 function item(id: FreshId, now: Date, fileState: 'ok' | 'stale' | 'unavailable' | null, asof: string | null, source: string | null, note?: string): FreshnessItem {
-  if (!asof) return { id, level: fileState === 'unavailable' ? 'unavailable' : 'missing', asof: null, ageDays: null, source, note };
+  if (!asof) {
+    const inactive = fileState === 'unavailable' && !!note && (note.startsWith('skipped:') || note === 'empty-universe');
+    return { id, level: inactive ? 'inactive' : fileState === 'unavailable' ? 'unavailable' : 'missing', asof: null, ageDays: null, source, note };
+  }
   const age = ageInDays(asof, now);
   const old = age > RULES.freshness.staleAfterDays[id];
   const level: FreshLevel = fileState === 'unavailable' ? 'unavailable' : fileState === 'stale' || old ? 'stale' : 'ok';
@@ -57,4 +61,4 @@ export function freshness(M: MarketData, now: Date, heldSymbols: string[] = []):
 }
 
 export const worstLevel = (items: FreshnessItem[]): FreshLevel =>
-  (['unavailable', 'stale', 'missing', 'ok'] as const).find((l) => items.some((i) => i.level === l)) ?? 'ok';
+  (['unavailable', 'stale', 'missing', 'inactive', 'ok'] as const).find((l) => items.some((i) => i.level === l)) ?? 'ok';

@@ -233,3 +233,29 @@ test.describe('analysis drafts and approval', () => {
     await close();
   });
 });
+
+test.describe('customer-facing wording', () => {
+  test('the dollar rate is labelled with its real source, not "default"', async ({ browser }) => {
+    const { page, close } = await openApp(browser, { profile, pack });
+    await expect(page.locator('#subtitle')).toContainText('בנק ישראל, 22.10.2026');
+    await expect(page.locator('#subtitle')).not.toContainText('ברירת מחדל');
+    await close();
+  });
+  test('with no usable data, it says "default" only when it really is the default', async ({ browser }) => {
+    const files = base(); delete files['market.json'].fx;
+    const { page, close } = await openApp(browser, { profile, pack, files });
+    await expect(page.locator('#subtitle')).toContainText('ברירת מחדל');
+    await close();
+  });
+  test('sources that are simply switched off look neutral, not like an error', async ({ browser }) => {
+    const files = base();
+    files['market.json'].groups = {
+      fx: { state: 'unavailable', asof: null, fetchedAt: null, source: 'boi', note: 'skipped:licence-not-acknowledged' },
+      quotes: { state: 'unavailable', asof: null, fetchedAt: null, source: 'none', note: 'empty-universe' },
+    };
+    const { page, close } = await openApp(browser, { profile, pack, files });
+    await expect(page.locator('#freshSummary')).toContainText('אינם פעילים');
+    expect(await page.locator('#freshSummary').getAttribute('class')).not.toContain('c-loss');
+    await close();
+  });
+});

@@ -124,7 +124,7 @@ export async function refreshMarket(o: RefreshOptions): Promise<RefreshSummary> 
     groups.benchmark = okGroup(bench.asof, quotesSource, now);
   } else {
     next.benchmark = prev?.benchmark ? { ...prev.benchmark, ...(universe.benchmarkBaseDate ? { baseDate: universe.benchmarkBaseDate } : {}) } : undefined;
-    groups.benchmark = failedGroup(prev?.groups.benchmark, quotesSource, 'benchmark-not-refreshed');
+    groups.benchmark = failedGroup(prev?.groups.benchmark, quotesSource, !P.history && !P.quote ? `skipped:${skippedFor('history')?.reason ?? 'not-configured'}` : 'benchmark-not-refreshed');
   }
 
   // ---- Earnings dates and dividends ----

@@ -225,6 +225,22 @@ describe('freshness', () => {
 describe('freshness: reasons', () => {
   it('passes the pipeline note through so the UI can explain why data is missing', () => {
     const items = freshness({ tickers: {}, meta: { groups: { fx: { state: 'unavailable', asof: null, fetchedAt: null, source: 'boi', note: 'skipped:licence-not-acknowledged' } }, fundamentalsAsof: {}, stalePrices: [], cpiAsof: null, historyAsof: null } } as any, new Date(2026, 9, 23));
-    expect(items[0]).toMatchObject({ id: 'fx', level: 'unavailable', note: 'skipped:licence-not-acknowledged' });
+    expect(items[0]).toMatchObject({ id: 'fx', level: 'inactive', note: 'skipped:licence-not-acknowledged' });
+  });
+});
+
+describe('freshness: inactive sources are not failures', () => {
+  const now = new Date(2026, 9, 23);
+  const M = (groups: Record<string, unknown>) => ({ tickers: {}, meta: { groups, fundamentalsAsof: {}, analysisAsof: {}, draftsShown: [], stalePrices: [], cpiAsof: null, historyAsof: null } }) as any;
+  const off = (note: string) => ({ state: 'unavailable', asof: null, fetchedAt: null, source: 'x', note });
+  it('"not switched on" is neutral; a real failure still is not', () => {
+    const items = freshness(M({ fx: off('skipped:not-configured'), quotes: off('empty-universe'), calendar: off('HTTP 500') }), now);
+    expect(items.map((i) => i.level)).toEqual(['inactive', 'inactive', 'unavailable']);
+    expect(worstLevel(items.slice(0, 2))).toBe('inactive');
+    expect(worstLevel(items)).toBe('unavailable');
+  });
+  it('a source that had data and is now skipped is not hidden as inactive', () => {
+    const items = freshness(M({ fx: { state: 'unavailable', asof: '2026-10-20', fetchedAt: null, source: 'x', note: 'skipped:licence-not-acknowledged' } }), now);
+    expect(items[0]?.level).toBe('unavailable');
   });
 });

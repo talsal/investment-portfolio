@@ -390,3 +390,4 @@ button, .toggle-btn, summary { min-height: 24px; }
 .compare-section.collapsible > summary:focus-visible { outline: 2px solid var(--series-1); outline-offset: 2px; }
 .compare-section.collapsible[open] > summary { margin-bottom: 4px; }
 .uncovered-list { font-weight: 700; font-size: calc(14px * var(--fs)); word-break: break-word; margin: 6px 0; }
+.fresh-inactive .fl-val { color: var(--text-secondary); }
