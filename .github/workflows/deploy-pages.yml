@@ -39,7 +39,7 @@ jobs:
           VITE_REPO_URL: https://github.com/${{ github.repository }}
           VITE_REQUEST_EMAIL: ${{ vars.REQUEST_EMAIL }}
       - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v5
         with: { path: dist }
       - id: deployment
         uses: actions/deploy-pages@v4
