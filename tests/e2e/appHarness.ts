@@ -13,6 +13,8 @@ export interface OpenOpts extends Scenario {
   mode?: 'browser' | 'file' | 'none';
   /** Overrides the served data files (path relative to data/ -> JSON). Default: derived from `pack`. */
   files?: Record<string, unknown>;
+  /** Leave the first-run wizard to open on its own (default: tests mark it as already done). */
+  wizard?: boolean;
   /** Skip the frozen clock (needed to measure real durations: a fixed clock also freezes performance.now). */
   realClock?: boolean;
   /** Page to open (default '/'), e.g. '/?drafts=1'. */
@@ -36,12 +38,13 @@ export async function openApp(browser: Browser, o: OpenOpts): Promise<{ page: Pa
     return rel in files ? r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(files[rel]) }) : r.fulfill({ status: 404, body: '' });
   });
   const mode = o.mode ?? 'browser';
-  await page.addInitScript(([k, v, m, doSeed]) => {
+  await page.addInitScript(([k, v, m, doSeed, wz]) => {
     if (sessionStorage.getItem('seeded')) return;
     sessionStorage.setItem('seeded', '1');
     if (m !== 'none') localStorage.setItem('portfolio.mode', m as string);
+    if (wz !== '1') sessionStorage.setItem('portfolio.wizardDone', '1');
     if (doSeed === '1') localStorage.setItem(k as string, v as string);
-  }, [PROFILE_KEY, typeof o.profile === 'string' ? o.profile : JSON.stringify(o.profile), mode, o.seed !== false && mode === 'browser' ? '1' : '0']);
+  }, [PROFILE_KEY, typeof o.profile === 'string' ? o.profile : JSON.stringify(o.profile), mode, o.seed !== false && mode === 'browser' ? '1' : '0', o.wizard ? '1' : '0']);
   await o.beforeLoad?.(page);
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(String(e)));

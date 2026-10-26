@@ -391,3 +391,15 @@ button, .toggle-btn, summary { min-height: 24px; }
 .compare-section.collapsible[open] > summary { margin-bottom: 4px; }
 .uncovered-list { font-weight: 700; font-size: calc(14px * var(--fs)); word-break: break-word; margin: 6px 0; }
 .fresh-inactive .fl-val { color: var(--text-secondary); }
+
+/* ---- onboarding wizard ---- */
+.wizard { margin-top: 14px; }
+.wizard-on > :not(#wizard) { display: none !important; }
+.wz-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+.wizard h2 { font-size: calc(17px * var(--fs)); margin: 10px 0 4px; }
+.wizard h2:focus { outline: none; }
+.wz-card { border: 1px solid var(--border); border-radius: 10px; background: var(--surface-1); padding: 10px; margin: 10px 0; }
+.wz-card .toggle-btn { margin-top: 8px; }
+.wz-status { min-height: 1.2em; }
+.wz-nav { margin-top: 16px; }
+.wz-primary { font-weight: 700; border-color: var(--link); }

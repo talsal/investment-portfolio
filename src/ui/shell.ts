@@ -130,6 +130,7 @@ export function buildShell(root: HTMLElement): void {
     ${chooser()}
     ${gate()}
     <div id="workspace" hidden>
+    <section id="wizard" class="in-card wizard" role="region" aria-labelledby="wzH" hidden></section>
     <div class="nudge" id="backupNudge" role="status" hidden></div>
     <p class="rate-note mnotice" data-parity-skip>${rich(T.app.notice)}</p>
     <p id="demoNotice" role="status" hidden data-parity-skip>${T.app.demoNotice}</p>
@@ -138,7 +139,7 @@ export function buildShell(root: HTMLElement): void {
     ${storageCard()}
     ${editorCard()}
     <div id="results" tabindex="-1"></div>
-    <div id="outEmpty" class="empty-box"><h2>${T.emptySteps.lead}</h2><ol>${T.emptySteps.steps.map((x) => html`<li>${x}</li>`)}</ol></div>
+    <div id="outEmpty" class="empty-box"><h2>${T.emptySteps.lead}</h2><ol>${T.emptySteps.steps.map((x) => html`<li>${x}</li>`)}</ol><p><button type="button" class="toggle-btn wz-primary" id="wzStart">${T.wizard.start}</button></p></div>
     <div id="outMain" hidden>
       <div class="compare-section first">
         <h2>${T.total.h}</h2>

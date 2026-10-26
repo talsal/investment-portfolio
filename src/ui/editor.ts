@@ -1,4 +1,4 @@
-import type { Profile } from '../calc/types';
+import type { HoldingRow, Profile } from '../calc/types';
 import { RULES } from '../config/rules';
 import { he } from '../i18n/he';
 import { TICKER_NAMES } from '../i18n/tickerNames';
@@ -56,6 +56,22 @@ export function syncTopFields(P: Profile): void {
   document.querySelectorAll<HTMLInputElement>('[data-setting]').forEach((el) => { el.value = (P.settings as unknown as Record<string, string>)[el.dataset.setting as string] ?? ''; });
 }
 
+/**
+ * Normalises a typed ticker and fills in what can be inferred: upper-case symbol, Hebrew name for well-known
+ * tickers (only when the name is blank or was auto-filled), and shekel currency for Israeli security numbers.
+ * Mutates the row. Shared by the editor and the onboarding wizard.
+ */
+export function completeTicker(row: HoldingRow): { filledName: string | null; isIl: boolean; unknown: boolean } {
+  row.t = row.t.trim().toUpperCase();
+  const nm = nameFor(row.t), cur = (row.n || '').trim(), isIl = /^\d{5,9}$/.test(row.t.replace(/\s+/g, ''));
+  if (isIl) {
+    row.t = row.t.replace(/\s+/g, '');
+    if (row.c === 'USD') row.c = 'ILS';
+  }
+  if (nm && (cur === '' || AUTO_NAMES.has(cur))) { row.n = nm; return { filledName: nm, isIl, unknown: false }; }
+  return { filledName: null, isIl, unknown: !nm && !!row.t && cur === '' };
+}
+
 export function setMsg(text: string, bad = false): void {
   const m = $('inMsg');
   m.textContent = text;
@@ -89,23 +105,18 @@ export function wireEditor(P: () => Profile, hooks: EditorHooks): void {
     if (g === 'rows' && f === 't') {
       const row = P().rows[i];
       if (!row) return;
-      row.t = t.value.trim().toUpperCase();
+      const r = completeTicker(row);
       t.value = row.t;
-      const nm = nameFor(row.t), cur = (row.n || '').trim(), isIl = /^\d{5,9}$/.test(row.t.replace(/\s+/g, ''));
-      if (isIl) {
-        row.t = row.t.replace(/\s+/g, '');
-        t.value = row.t;
-        if (row.c === 'USD') row.c = 'ILS';
+      if (r.isIl) {
         const ci = document.querySelector<HTMLSelectElement>(`[data-g="rows"][data-i="${i}"][data-f="c"]`);
         if (ci) ci.value = row.c;
       }
-      const note = isIl ? he.editor.ilNote : '';
-      if (nm && (cur === '' || AUTO_NAMES.has(cur))) {
-        row.n = nm;
+      const note = r.isIl ? he.editor.ilNote : '';
+      if (r.filledName) {
         const ni = document.querySelector<HTMLInputElement>(`[data-g="rows"][data-i="${i}"][data-f="n"]`);
-        if (ni) ni.value = nm;
-        setMsg(he.editor.nameFilled(nm) + note);
-      } else if (!nm && row.t && cur === '') setMsg(he.editor.unknownTicker(isIl, row.t) + note);
+        if (ni) ni.value = r.filledName;
+        setMsg(he.editor.nameFilled(r.filledName) + note);
+      } else if (r.unknown) setMsg(he.editor.unknownTicker(r.isIl, row.t) + note);
       else if (note) setMsg(note.trim());
       hooks.onEdit();
       return;

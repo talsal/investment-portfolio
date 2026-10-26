@@ -21,6 +21,7 @@ import { renderFreshness } from './sections/freshnessPanel';
 import { renderWithdrawal, syncWithdrawalInputs } from './sections/withdrawal';
 import { applyFontScale, loadFontScale, saveFontScale, type FontScale } from './prefs';
 import { wireStorageUi } from './storageUi';
+import { wireWizard } from './wizard';
 
 type View = 'chooser' | 'gate' | 'workspace';
 
@@ -63,7 +64,15 @@ export async function startApp(root: HTMLElement): Promise<void> {
       if (target) { target.tabIndex = -1; target.focus({ preventScroll: false }); }
     }
     firstView = false;
+    if (v === 'workspace') maybeOpenWizard();
   }
+
+  // ---- first-run wizard ----
+  const WZ_DONE = 'portfolio.wizardDone'; // per browser session: do not re-open the wizard after it was closed
+  const wzDone = () => { try { return sessionStorage.getItem(WZ_DONE) === '1'; } catch { return false; } };
+  const isBlank = () => !P.rows.length && !P.gemel.length && !P.hish.length && !P.cashUsd && !P.cashNis && !P.mmf;
+  function openWizard() { $('workspace').classList.add('wizard-on'); wizard.open(); }
+  function maybeOpenWizard() { if (isBlank() && !wzDone() && !P.settings.example) openWizard(); }
 
   function render() {
     performance.mark('render:start');
@@ -172,6 +181,17 @@ export async function startApp(root: HTMLElement): Promise<void> {
     ui.refresh();
     ensureData();
   }
+
+  const wizard = wireWizard({
+    getProfile: () => P, getMarket: market, onChange: afterEdit, mode: () => ctrl.mode,
+    save: async () => { if (ctrl.mode === 'file') await ctrl.saveFile(P); else ctrl.exportBackup(P); ui.refresh(); },
+    onClose: () => {
+      try { sessionStorage.setItem(WZ_DONE, '1'); } catch { /* private mode: it just may reopen */ }
+      $('workspace').classList.remove('wizard-on');
+      rebuild(); render(); window.scrollTo(0, 0); $('results').focus();
+    },
+  });
+  $('wzStart').addEventListener('click', openWizard);
 
   wireEditor(() => P, { onEdit: afterEdit, onStructure: () => { buildEditor(P); afterEdit(); } });
   bindHistoryModes(render);
