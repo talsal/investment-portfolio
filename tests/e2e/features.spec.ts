@@ -171,3 +171,40 @@ test.describe('personal data pack', () => {
     await close();
   });
 });
+
+test.describe('uncovered tickers', () => {
+  const rows = [
+    { n: 'A', t: 'ALFA', c: 'USD', ty: 'eq', q: '1', k: '', p: '' },
+    { n: 'Z', t: 'ZZZZ', c: 'USD', ty: 'eq', q: '2', k: '', p: '10' },
+    { n: 'Y', t: 'yyyy 2', c: 'USD', ty: 'eq', q: '3', k: '', p: '5' },
+  ];
+  test('lists only tickers with no data, copies symbols only, and sends nothing', async ({ browser }) => {
+    const { page, errors, close } = await openApp(browser, { profile: { rows }, pack });
+    await expect(page.locator('#uncSection')).toBeVisible();
+    await expect(page.locator('#uncList')).toHaveText('ZZZZ, YYYY2');
+    await page.evaluate(() => { (window as any).__copied = null; Object.defineProperty(navigator, 'clipboard', { value: { writeText: async (t: string) => { (window as any).__copied = t; } }, configurable: true }); });
+    const requests: string[] = [];
+    page.on('request', (r) => requests.push(r.url()));
+    await page.click('#uncCopy');
+    await expect(page.locator('#uncMsg')).toContainText('הועתק');
+    expect(await page.evaluate(() => (window as any).__copied)).toBe('סימולים: ZZZZ, YYYY2');
+    expect(requests).toEqual([]); // the copy button makes no network request
+    expect(errors).toEqual([]);
+    await close();
+  });
+  test('is hidden when every held ticker is covered, and when a personal pack covers the rest', async ({ browser }) => {
+    const { page, close } = await openApp(browser, { profile: { rows: rows.slice(0, 1) }, pack });
+    await expect(page.locator('#uncSection')).toBeHidden();
+    await close();
+    const two = await openApp(browser, { profile: { rows, dataPack: { tickers: { ZZZZ: { price: 1 }, YYYY2: { price: 1 } } } }, pack });
+    await expect(two.page.locator('#uncSection')).toBeHidden();
+    await two.close();
+  });
+  test('the clipboard failing is handled', async ({ browser }) => {
+    const { page, close } = await openApp(browser, { profile: { rows }, pack });
+    await page.evaluate(() => Object.defineProperty(navigator, 'clipboard', { value: { writeText: async () => { throw new Error('blocked'); } }, configurable: true }));
+    await page.click('#uncCopy');
+    await expect(page.locator('#uncMsg')).toContainText('ההעתקה לא הצליחה');
+    await close();
+  });
+});

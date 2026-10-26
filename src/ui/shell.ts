@@ -161,6 +161,7 @@ export function buildShell(root: HTMLElement): void {
         <div class="cf-grid"><label>${T.withdrawal.years}<input type="text" inputmode="decimal" autocomplete="off" data-wd="years"></label><label>${T.withdrawal.rate}<input type="text" inputmode="decimal" autocomplete="off" data-wd="realRate"></label></div>
         <div class="cf-tiles" id="wdTiles"></div><p class="rate-note" id="wdNote"></p>`, { note: T.withdrawal.note, skip: true })}
     </div>
+    ${section('uncSection', T.uncovered.h, html`<p class="uncovered-list" id="uncList" dir="ltr" tabindex="-1"></p><div class="in-btns"><button type="button" class="toggle-btn" id="uncCopy">${T.uncovered.copy}</button></div><p class="in-msg" id="uncMsg" role="status"></p>`, { hidden: true, note: T.uncovered.note, skip: true })}
     <h2 id="anaTitle" class="ana-title" hidden>${T.analysis.h}</h2>
     <div class="ana-pending" id="anaPending" hidden></div>
     ${section('bfSection', T.criteria.h, html`<div class="bf-wrap" id="bfTable"></div><h3 class="sub-h">${T.criteria.baseH}</h3><div class="bf-wrap" id="bfBase"></div><p class="rate-note" id="bfNote"></p>`, { hidden: true, note: rich(T.criteria.note({ pe: RULES.criteria.pe.maxForward, fcf: RULES.criteria.fcf.minYieldPct })) })}

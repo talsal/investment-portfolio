@@ -83,6 +83,7 @@ export async function startApp(root: HTMLElement): Promise<void> {
     renderCashFlow(ctx);
     renderFreshness(ctx);
     renderPackStatus(M);
+    renderUncovered(ctx);
     fillPricePlaceholders(ctx);
     markScrollRegions();
     $('demoNotice').hidden = !M.demo;
@@ -95,6 +96,14 @@ export async function startApp(root: HTMLElement): Promise<void> {
     $('packStatus').textContent = P.dataPack ? he.pack.active(n, P.dataPack.asof ?? '') : he.pack.none;
     $('packRemove').hidden = !P.dataPack;
     void M;
+  }
+
+  /** Held tickers the data does not cover: listed so the user can choose to tell the site's operator (nothing is sent by the site). */
+  function renderUncovered({ M }: Ctx) {
+    const syms = [...new Set(P.rows.map((r) => r.t.toUpperCase().replace(/\s+/g, '')).filter((t) => t && !M.tickers[t]))];
+    show('uncSection', syms.length > 0);
+    $('uncList').textContent = syms.join(', ');
+    if (!syms.length) $('uncMsg').textContent = '';
   }
 
   /** A blank price shows the automatic price (from the data) as a placeholder, so nothing looks missing. */
@@ -176,6 +185,16 @@ export async function startApp(root: HTMLElement): Promise<void> {
     afterEdit();
   }));
 
+  $('uncCopy').addEventListener('click', async () => {
+    const text = he.uncovered.listLead + $('uncList').textContent;
+    try { await navigator.clipboard.writeText(text); $('uncMsg').textContent = he.uncovered.copied; }
+    catch {
+      // Clipboard blocked: select the list so the user can copy it by hand.
+      const sel = window.getSelection(), range = document.createRange();
+      range.selectNodeContents($('uncList')); sel?.removeAllRanges(); sel?.addRange(range);
+      $('uncMsg').textContent = he.uncovered.copyFailed;
+    }
+  });
   $('packImport').addEventListener('click', () => $('packFile').click());
   $('packFile').addEventListener('change', async function (this: HTMLInputElement) {
     const f = this.files?.[0]; this.value = '';
