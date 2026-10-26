@@ -92,6 +92,7 @@ function packAskPanel(): Raw {
     <p class="in-hint">${A.privacy}</p>
     <p class="in-hint">${A.onlyUs}</p>
     <p class="in-hint b" id="paNone" hidden>${A.noTickers}</p>
+    <p class="in-hint b" id="paHint" hidden></p>
     <div id="paFlow">
       <label class="in-label" for="paPrompt">${A.promptLabel}</label>
       <textarea id="paPrompt" class="in-area" rows="8" readonly></textarea>

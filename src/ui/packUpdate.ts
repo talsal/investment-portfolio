@@ -3,7 +3,7 @@ import { nz } from '../calc/num';
 import { checkPack, STALE_DAYS, type PackCheck } from '../data/packCheck';
 import { MAX_PACK_CHARS, mergePack, parsePackText, sanitizePack, stampPack } from '../data/pack';
 import { isoToDmy } from './format';
-import { packWants } from '../data/packTickers';
+import { israeliHints, packWants } from '../data/packTickers';
 import { he } from '../i18n/he';
 import { $ } from './dom';
 
@@ -36,6 +36,9 @@ export function wirePackUpdate(h: PackUpdateHooks): { open(): void; fromFile(f: 
     details.open = true;
     const wants = packWants(h.getProfile());
     $('paNone').hidden = wants.length > 0;
+    const hint = israeliHints(wants);
+    $('paHint').textContent = [hint.noName.length ? A.hintNoName(hint.noName.join(', ')) : '', hint.notNumber.length ? A.hintNotNumber(hint.notNumber.join(', ')) : ''].filter(Boolean).join(' ');
+    $('paHint').hidden = !hint.noName.length && !hint.notNumber.length;
     $('paFlow').hidden = wants.length === 0;
     ($('paPrompt') as HTMLTextAreaElement).value = wants.length ? A.prompt(wants, stamp(h.now())) : '';
     resetPreview();

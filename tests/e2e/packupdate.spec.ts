@@ -187,6 +187,23 @@ test.describe('guided data update', () => {
     await close();
   });
 
+  test('Israeli rows an assistant cannot identify are called out before the instructions are copied', async ({ browser }) => {
+    const il = [
+      { n: '', t: 'IBI.F183', c: 'AGO', ty: 'eq', q: '3', k: '100', p: '100' },
+      { n: 'קרן עם שם', t: '1234567', c: 'ILS', ty: 'eq', q: '3', k: '10', p: '10' },
+    ];
+    const { page, close } = await openApp(browser, { profile: { rows: il }, pack, files: emptySite() });
+    await openAsk(page);
+    await expect(page.locator('#paHint')).toContainText('בלי שם קשה ל-AI לזהות אותם: IBI.F183');
+    await expect(page.locator('#paHint')).toContainText('אינו מספר נייר: IBI.F183');
+    await expect(page.locator('#paHint')).not.toContainText('1234567');
+    await close();
+    const ok = await openApp(browser, { profile: { rows: [il[1]] }, pack, files: emptySite() });
+    await openAsk(ok.page);
+    await expect(ok.page.locator('#paHint')).toBeHidden();
+    await ok.close();
+  });
+
   test('fits a 360px phone screen with the preview open (no horizontal page scroll)', async ({ browser }) => {
     const { page, close } = await openApp(browser, { profile: { rows }, pack, files: emptySite(), viewport: { width: 360, height: 780 } });
     await openAsk(page);

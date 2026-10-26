@@ -23,3 +23,14 @@ export function packWants(P: Profile): PackWant[] {
   }
   return [...out.values()].sort((a, b) => a.t.localeCompare(b.t));
 }
+
+const SEC_NUMBER = /^\d{5,9}$/;
+
+/**
+ * Israeli rows an assistant will struggle with: no name to search by, or a code that is not a security number
+ * (a number is unambiguous; a free-form code is not).
+ */
+export function israeliHints(wants: PackWant[]): { noName: string[]; notNumber: string[] } {
+  const il = wants.filter((w) => w.cur !== 'USD');
+  return { noName: il.filter((w) => !w.name).map((w) => w.t), notNumber: il.filter((w) => !SEC_NUMBER.test(w.t)).map((w) => w.t) };
+}

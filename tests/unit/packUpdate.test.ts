@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { checkPack, JUMP_PCT, STALE_DAYS } from '../../src/data/packCheck';
 import { mergePack, parsePackText, sanitizePack, stampPack } from '../../src/data/pack';
 import { expectedUsClose } from '../../src/data/tradingDay';
-import { packWants } from '../../src/data/packTickers';
+import { israeliHints, packWants } from '../../src/data/packTickers';
 import { he } from '../../src/i18n/he';
 import { profile, row } from './helpers';
 
@@ -211,5 +211,19 @@ describe('per-entry dates, stamping and merging', () => {
     const old = checkPack(input({ asof: '26.10.2026', tickers: { AAA: { price: 11 } } }, { previous: pk({ asof: '01.10.2026', tickers: { AAA: { price: 10 }, OLD: { price: 3 } } }), merge: true }));
     expect(old.kept[0]).toMatchObject({ t: 'OLD', ageDays: 25 });
     expect(old.clean).toBe(false);
+  });
+});
+
+describe('israeliHints', () => {
+  it('names Israeli rows without a name and rows whose code is not a security number; US rows never', () => {
+    const w = [
+      { t: 'AAPL', cur: 'USD' as const, name: '' },
+      { t: '1234567', cur: 'ILS' as const, name: 'Fund' },
+      { t: '7654321', cur: 'AGO' as const, name: '' },
+      { t: 'IBI.F183', cur: 'AGO' as const, name: 'X' },
+      { t: 'HRL.F238', cur: 'AGO' as const, name: '' },
+    ];
+    expect(israeliHints(w)).toEqual({ noName: ['7654321', 'HRL.F238'], notNumber: ['IBI.F183', 'HRL.F238'] });
+    expect(israeliHints([{ t: '1234567', cur: 'ILS', name: 'Fund' }])).toEqual({ noName: [], notNumber: [] });
   });
 });
