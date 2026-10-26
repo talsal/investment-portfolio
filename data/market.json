@@ -1,11 +1,11 @@
 {
   "schema": 1,
-  "generatedAt": "2026-10-23T13:08:09.561Z",
+  "generatedAt": "2026-10-26T09:20:23.647Z",
   "groups": {
     "fx": {
       "state": "ok",
       "asof": "2026-10-23",
-      "fetchedAt": "2026-10-23T13:08:09.561Z",
+      "fetchedAt": "2026-10-26T09:20:23.647Z",
       "source": "boi"
     },
     "quotes": {
@@ -20,7 +20,7 @@
       "asof": null,
       "fetchedAt": null,
       "source": "none",
-      "note": "benchmark-not-refreshed"
+      "note": "skipped:not-configured"
     },
     "calendar": {
       "state": "unavailable",
