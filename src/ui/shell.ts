@@ -106,6 +106,10 @@ function packAskPanel(): Raw {
       <p id="pvSummary"></p>
       <div class="bf-wrap" id="pvWrap"><table class="data-table" id="pvTable"></table></div>
       <ul class="in-warns" id="pvWarns"></ul>
+      <fieldset class="in-set" id="pvModeBox" hidden><legend>${C.modeLegend}</legend>
+        <label class="in-check"><input type="radio" name="pvMode" id="pvMerge" value="merge" checked> ${C.modeMerge}</label>
+        <label class="in-check"><input type="radio" name="pvMode" id="pvReplace" value="replace"> ${C.modeReplace}</label>
+      </fieldset>
       <div class="in-btns"><button type="button" class="toggle-btn" id="pvConfirm">${C.confirm}</button><button type="button" class="toggle-btn" id="pvCancel">${C.cancel}</button></div>
     </div>
   </div>`;

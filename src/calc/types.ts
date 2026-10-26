@@ -48,6 +48,8 @@ export interface TickerPack {
   name?: string; cur?: string; price: number; bf?: BfInputs; base?: string[]; baseClose?: number;
   events?: MarketEvent[]; div?: { perShare: number; freq?: number }; watch?: boolean;
   watchAdded?: { date: string; px: number };
+  /** ISO date of this entry's price in a personal pack; older than the pack's own date when it was kept from an earlier update. */
+  asof?: string;
 }
 export interface Benchmark { date: string; dateLabel?: string; spyBase: number; spyCur: number }
 export interface History { dates: string[]; fx?: number[]; spy: number[]; close: Record<string, number[]> }

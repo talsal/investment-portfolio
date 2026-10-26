@@ -49,6 +49,8 @@ function ticker(o: unknown): TickerPack | null {
       ? [{ d: e.d as string | null, what: e.what as string, ...(e.st === 'confirmed' || e.st === 'est' || e.st === 'unk' ? { st: e.st } : {}) }] : []));
   }
   if (isObj(o.div) && num(o.div.perShare) && o.div.perShare >= 0) t.div = { perShare: o.div.perShare, ...(num(o.div.freq) && o.div.freq >= 1 && o.div.freq <= 12 ? { freq: o.div.freq } : {}) };
+  const ta = typeof o.asof === 'string' ? (ISO.test(o.asof) ? o.asof : dmyToIso(o.asof)) : null;
+  if (ta) t.asof = ta;
   if (o.watch === true) t.watch = true;
   if (isObj(o.watchAdded) && str(o.watchAdded.date, 20) && pos(o.watchAdded.px)) t.watchAdded = { date: o.watchAdded.date, px: o.watchAdded.px };
   return t;
@@ -109,6 +111,9 @@ export function applyPack(base: MarketData, pack: MarketData): MarketData {
     groups: {}, fundamentalsAsof: {}, analysisAsof: {}, draftsShown: [], stalePrices: [], cpiAsof: null, historyAsof: null,
     personalPack: { asof: dmyToIso(pack.asof) },
   };
+  // Entries kept from an earlier update are named on the dashboard like any carried-over price.
+  const packIso = dmyToIso(pack.asof);
+  if (packIso) M.meta.stalePrices = Object.entries(pack.tickers).filter(([, t]) => t.asof && t.asof < packIso).map(([k]) => k);
   return M;
 }
 
@@ -126,4 +131,30 @@ export function parsePackText(text: string): PackTextResult {
   if (a >= 0 && b > a) tries.push(t.slice(a, b + 1));
   for (const c of tries) { try { return { ok: true, value: JSON.parse(c) }; } catch { /* try the next shape */ } }
   return { ok: false, error: 'notJson' };
+}
+
+/** Gives every entry its own date (the pack's date unless it already has one), so later merges know how old each price is. */
+export function stampPack(p: MarketData): MarketData {
+  const iso = dmyToIso(p.asof);
+  if (!iso) return p;
+  return { ...p, tickers: Object.fromEntries(Object.entries(p.tickers).map(([k, t]) => [k, t.asof ? t : { ...t, asof: iso }])) };
+}
+
+/**
+ * Completes the existing pack with a newer, possibly partial one: new entries win, entries the new answer did not
+ * include stay with their own (older) date, and the other pack-wide fields come from the new one when it has them.
+ */
+export function mergePack(prev: MarketData | null, next: MarketData): MarketData {
+  const n = stampPack(next);
+  if (!prev) return n;
+  const p = stampPack(prev);
+  const M: MarketData = { ...p, tickers: { ...p.tickers, ...n.tickers } };
+  if (n.fx !== undefined) M.fx = n.fx;
+  if (n.cpi !== undefined) M.cpi = n.cpi;
+  if (n.bm !== undefined) M.bm = n.bm;
+  if (n.hist !== undefined) M.hist = n.hist;
+  if (n.demo !== undefined) M.demo = n.demo;
+  const a = dmyToIso(n.asof), b = dmyToIso(p.asof);
+  if (n.asof && (!b || (a && a >= b))) M.asof = n.asof;
+  return M;
 }

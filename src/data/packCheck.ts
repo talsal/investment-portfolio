@@ -24,8 +24,10 @@ export interface PackCheck {
   missing: string[];
   /** Present in the raw answer but dropped by the strict reader. */
   rejected: string[];
-  /** In the previous pack, absent from the new one (they disappear on import). */
+  /** In the previous pack, absent from the new one, and removed on import (replace mode only). */
   dropped: string[];
+  /** Merge mode: previous entries the new answer did not include; they stay, with their own date. */
+  kept: { t: string; asofIso: string | null; ageDays: number | null }[];
   extra: number;
   asofIso: string | null; ageDays: number | null;
   noDate: boolean; stale: boolean; future: boolean;
@@ -47,6 +49,8 @@ export interface PackCheckInput {
   previous: MarketData | null;
   typed: Record<string, number>;
   typedFx: number | null;
+  /** True to complete the previous pack with this answer; false to replace it. */
+  merge: boolean;
   today: Date;
 }
 
@@ -70,13 +74,19 @@ export function checkPack(i: PackCheckInput): PackCheck {
   const rejected = rawTickers && typeof rawTickers === 'object' && !Array.isArray(rawTickers)
     ? Object.keys(rawTickers as object).map((k) => k.toUpperCase()).filter((k) => !have.has(k)) : [];
   const wantedSet = new Set(i.wanted);
-  const missing = i.wanted.filter((t) => !have.has(t) && !rejected.includes(t));
-  const dropped = i.previous ? Object.keys(i.previous.tickers).filter((t) => !have.has(t)) : [];
+  const absent = i.previous ? Object.keys(i.previous.tickers).filter((t) => !have.has(t)) : [];
+  const dropped = i.merge ? [] : absent;
+  const today0 = Date.UTC(i.today.getFullYear(), i.today.getMonth(), i.today.getDate());
+  const kept = i.merge && i.previous ? absent.map((t) => {
+    const iso = i.previous?.tickers[t]?.asof ?? dmyToIso(i.previous?.asof);
+    return { t, asofIso: iso, ageDays: iso ? Math.round((today0 - Date.parse(iso)) / DAY) : null };
+  }) : [];
+  const keptSet = new Set(kept.map((k) => k.t));
+  const missing = i.wanted.filter((t) => !have.has(t) && !rejected.includes(t) && !keptSet.has(t));
   const extra = [...have].filter((t) => !wantedSet.has(t)).length;
 
   const asofIso = dmyToIso(i.pack.asof);
-  const t0 = Date.UTC(i.today.getFullYear(), i.today.getMonth(), i.today.getDate());
-  const ageDays = asofIso ? Math.round((t0 - Date.parse(asofIso)) / DAY) : null;
+  const ageDays = asofIso ? Math.round((today0 - Date.parse(asofIso)) / DAY) : null;
   const noDate = !asofIso;
   const stale = ageDays !== null && ageDays > STALE_DAYS;
   const future = ageDays !== null && ageDays < -1;
@@ -88,6 +98,6 @@ export function checkPack(i: PackCheckInput): PackCheck {
   const fxRef = i.typedFx ?? i.previous?.fx ?? null;
   const fx = i.pack.fx && fxRef ? { value: i.pack.fx, ref: fxRef, jump: Math.abs((i.pack.fx - fxRef) / fxRef) * 100 > FX_JUMP_PCT } : null;
 
-  const clean = !rows.some((r) => r.jump || r.curMismatch) && !missing.length && !rejected.length && !noDate && !stale && !future && !behindMarket && !fx?.jump;
-  return { rows, missing, rejected, dropped, extra, asofIso, ageDays, noDate, stale, future, behindMarket, fx, clean };
+  const clean = !rows.some((r) => r.jump || r.curMismatch) && !missing.length && !rejected.length && !noDate && !stale && !future && !behindMarket && !fx?.jump && !kept.some((k) => k.ageDays === null || k.ageDays > STALE_DAYS);
+  return { rows, missing, rejected, dropped, kept, extra, asofIso, ageDays, noDate, stale, future, behindMarket, fx, clean };
 }

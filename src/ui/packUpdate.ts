@@ -1,7 +1,8 @@
 import type { MarketData, Profile } from '../calc/types';
 import { nz } from '../calc/num';
-import { checkPack, type PackCheck } from '../data/packCheck';
-import { MAX_PACK_CHARS, parsePackText, sanitizePack } from '../data/pack';
+import { checkPack, STALE_DAYS, type PackCheck } from '../data/packCheck';
+import { MAX_PACK_CHARS, mergePack, parsePackText, sanitizePack, stampPack } from '../data/pack';
+import { isoToDmy } from './format';
 import { packWants } from '../data/packTickers';
 import { he } from '../i18n/he';
 import { $ } from './dom';
@@ -20,15 +21,15 @@ const stamp = (d: Date): string => {
   try { zone = Intl.DateTimeFormat().resolvedOptions().timeZone; } catch { /* unknown zone: leave it out */ }
   return `${dmy(d)}, ${d.toLocaleDateString('he-IL', { weekday: 'long' })}, ${d.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit', hour12: false })}${zone ? ` (${zone})` : ''}`;
 };
-const isoToDmy = (iso: string): string => `${iso.slice(8, 10)}.${iso.slice(5, 7)}.${iso.slice(0, 4)}`;
 const pct = (n: number): string => `${n > 0 ? '+' : ''}${n.toFixed(1)}%`;
 
 /** The guided update: instructions for the user's own assistant, paste or file in, a checked preview, confirm to apply. */
 export function wirePackUpdate(h: PackUpdateHooks): { open(): void; fromFile(f: File): Promise<void> } {
   const A = he.packAsk, C = he.packCheck;
-  let pending: MarketData | null = null;
+  let pending: { pack: MarketData; raw: unknown } | null = null;
+  const mode = (): 'merge' | 'replace' => (($('pvReplace') as HTMLInputElement).checked ? 'replace' : 'merge');
   const msg = (t: string, bad = false) => { const m = $('paMsg'); m.textContent = t; m.className = 'in-msg' + (bad ? ' bad' : ''); };
-  const resetPreview = () => { pending = null; $('paPreview').hidden = true; };
+  const resetPreview = () => { pending = null; $('paPreview').hidden = true; ($('pvMerge') as HTMLInputElement).checked = true; };
 
   function open(): void {
     const details = $('storageCard') as HTMLDetailsElement;
@@ -43,20 +44,21 @@ export function wirePackUpdate(h: PackUpdateHooks): { open(): void; fromFile(f: 
     const target = $('paH'); target.tabIndex = -1; target.focus();
   }
 
-  function preview(pack: MarketData, raw: unknown): void {
+  function preview(pack: MarketData, raw: unknown, focus = true): void {
     const P = h.getProfile();
+    $('pvModeBox').hidden = !P.dataPack;
     const typed: Record<string, number> = {};
     for (const r of P.rows) {
       const t = r.t.toUpperCase().replace(/\s+/g, '');
       if (nz(r.p) > 0 && !(t in typed)) typed[t] = nz(r.p);
     }
     const wants = packWants(P);
-    const res = checkPack({ raw, pack, wanted: wants.map((w) => w.t), expectedCur: Object.fromEntries(wants.map((w) => [w.t, w.cur])), previous: P.dataPack, typed, typedFx: nz(P.fx) > 0 ? nz(P.fx) : null, today: h.now() });
-    pending = pack;
-    paint(res, pack);
+    const res = checkPack({ raw, pack, wanted: wants.map((w) => w.t), expectedCur: Object.fromEntries(wants.map((w) => [w.t, w.cur])), previous: P.dataPack, typed, typedFx: nz(P.fx) > 0 ? nz(P.fx) : null, merge: !!P.dataPack && mode() === 'merge', today: h.now() });
+    pending = { pack, raw };
+    paint(res, pack, focus);
   }
 
-  function paint(res: PackCheck, pack: MarketData): void {
+  function paint(res: PackCheck, pack: MarketData, focus: boolean): void {
     $('pvSummary').textContent = C.summary(res.rows.length, pack.asof ?? '');
     const table = $('pvTable') as HTMLTableElement; table.replaceChildren();
     const head = table.createTHead().insertRow();
@@ -86,10 +88,16 @@ export function wirePackUpdate(h: PackUpdateHooks): { open(): void; fromFile(f: 
     if (res.missing.length) add(W.missing(res.missing.join(', ')));
     if (res.rejected.length) add(W.rejected(res.rejected.join(', ')));
     if (res.dropped.length) add(W.dropped(res.dropped.join(', ')), false);
+    if (res.kept.length) {
+      const label = (k: PackCheck['kept'][number]) => `${k.t} (${k.asofIso ? isoToDmy(k.asofIso) : W.keptNoDate})`;
+      add(W.kept(res.kept.map(label).join(', ')), false);
+      const old = res.kept.filter((k) => k.ageDays === null || k.ageDays > STALE_DAYS);
+      if (old.length) add(W.keptStale(old.map(label).join(', ')));
+    }
     if (res.extra > 0) add(W.extra(res.extra), false);
     if (res.clean) add(C.clean, false);
     $('paPreview').hidden = false;
-    const hd = $('pvH'); hd.focus();
+    if (focus) $('pvH').focus();
   }
 
   function checkText(text: string): void {
@@ -112,10 +120,13 @@ export function wirePackUpdate(h: PackUpdateHooks): { open(): void; fromFile(f: 
   });
   $('paCheck').addEventListener('click', () => checkText(($('paPaste') as HTMLTextAreaElement).value));
   $('paFile').addEventListener('click', () => $('packFile').click());
+  for (const id of ['pvMerge', 'pvReplace']) $(id).addEventListener('change', () => { if (pending) preview(pending.pack, pending.raw, false); });
   $('pvCancel').addEventListener('click', () => { resetPreview(); msg(''); });
   $('pvConfirm').addEventListener('click', () => {
     if (!pending) return;
-    const pack = pending, n = Object.keys(pack.tickers).length;
+    const P = h.getProfile();
+    const pack = P.dataPack && mode() === 'merge' ? mergePack(P.dataPack, pending.pack) : stampPack(pending.pack);
+    const n = Object.keys(pack.tickers).length;
     resetPreview();
     ($('paPaste') as HTMLTextAreaElement).value = '';
     h.apply(pack);

@@ -122,3 +122,8 @@ site sends nothing: the user copies and pastes. Thresholds are sanity checks, no
 A pack price is used for a row with a blank price only when the pack states the same currency as the row (see
 `docs/rules.md`, "Currency"). The text asks for prices, dividends and earnings dates (the last two for US stocks only) and the dollar rate; fundamentals and qualitative analysis
 are not requested from a user's assistant because they cannot be sanity-checked the same way.
+
+When the user already has a pack the preview offers two modes: *complete the existing pack* (default; new entries win, entries the
+answer did not include stay with their own date) or *replace it*. Every entry carries its own `asof` (ISO) so a later merge knows
+how old each price is; entries older than the pack date are named on the dashboard like any carried-over price, and kept
+entries older than `STALE_DAYS` are flagged. This lets a user ask a second time for only the tickers the first answer missed.

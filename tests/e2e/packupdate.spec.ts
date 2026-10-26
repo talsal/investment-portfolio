@@ -94,13 +94,44 @@ test.describe('guided data update', () => {
     await close();
   });
 
-  test('replacing a pack warns about tickers that would disappear', async ({ browser }) => {
+  test('replace mode warns about tickers that would disappear; merge mode keeps them with their own date', async ({ browser }) => {
     const prev = { asof: '22.10.2026', tickers: { ALFA: { price: 50 }, BETA: { price: 100 } } };
     const { page, close } = await openApp(browser, { profile: { rows, dataPack: prev }, pack, files: emptySite() });
     await openAsk(page);
     await page.fill('#paPaste', answer({ asof: '23.10.2026', tickers: { ALFA: { price: 51 } } }));
     await page.click('#paCheck');
+    await expect(page.locator('#pvModeBox')).toBeVisible();
+    await expect(page.locator('#pvMerge')).toBeChecked(); // default when a pack exists
+    await expect(page.locator('#pvWarns')).toContainText('נשארים מהחבילה הקודמת בלי עדכון, עם התאריך שלהם: BETA (22.10.2026)');
+    await page.check('#pvReplace');
     await expect(page.locator('#pvWarns')).toContainText('ייעלמו: BETA');
+    await expect(page.locator('#pvWarns')).not.toContainText('נשארים מהחבילה');
+    await page.check('#pvMerge');
+    await page.click('#pvConfirm');
+    await expect(page.locator('#paMsg')).toContainText('החבילה עודכנה (2 ניירות)');
+    await expect(page.locator('#packStatus')).toContainText('נכונה ל-23.10.2026');
+    await expect(page.locator('#packStatus')).toContainText('ישנים יותר: BETA (22.10.2026)');
+    await expect(page.locator('[data-g="rows"][data-i="1"][data-f="p"]')).toHaveAttribute('placeholder', /100\.00.*\(אוטומטי\)/);
+    await close();
+  });
+
+  test('a second round for only the missing tickers completes the first, and replace mode really replaces', async ({ browser }) => {
+    const { page, close } = await openApp(browser, { profile: { rows: rows.slice(0, 2) }, pack, files: emptySite() });
+    await openAsk(page);
+    await page.fill('#paPaste', answer({ asof: '23.10.2026', tickers: { ALFA: { price: 51 } } }));
+    await page.click('#paCheck');
+    await expect(page.locator('#pvModeBox')).toBeHidden(); // nothing to merge with yet
+    await page.click('#pvConfirm');
+    await page.fill('#paPaste', answer({ asof: '23.10.2026', tickers: { BETA: { price: 101 } } }));
+    await page.click('#paCheck');
+    await page.click('#pvConfirm');
+    await expect(page.locator('#paMsg')).toContainText('(2 ניירות)');
+    await expect(page.locator('#packStatus')).toContainText('חבילה אישית פעילה: 2 ניירות');
+    await page.fill('#paPaste', answer({ asof: '23.10.2026', tickers: { ALFA: { price: 52 } } }));
+    await page.click('#paCheck');
+    await page.check('#pvReplace');
+    await page.click('#pvConfirm');
+    await expect(page.locator('#packStatus')).toContainText('חבילה אישית פעילה: 1 ניירות');
     await close();
   });
 

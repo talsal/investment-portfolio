@@ -1,7 +1,7 @@
 import { compute, packCurrency } from '../calc/portfolio';
 import type { MarketData, Profile } from '../calc/types';
 import { loadExampleBundle } from '../data/legacyPack';
-import { applyPack } from '../data/pack';
+import { applyPack, dmyToIso } from '../data/pack';
 import { DataLoader } from '../data/loader';
 import { buildMailto } from '../data/mailto';
 import { REQUEST_EMAIL } from '../config/site';
@@ -11,6 +11,7 @@ import { browserDeps } from '../storage/browserDeps';
 import { StorageController } from '../storage/controller';
 import { loadTheme, saveTheme, type Theme } from '../storage/browserStore';
 import { $, show } from './dom';
+import { isoToDmy } from './format';
 import { buildEditor, setMsg, syncTopFields, wireEditor } from './editor';
 import type { Ctx } from './context';
 import { buildShell } from './shell';
@@ -116,7 +117,9 @@ export async function startApp(root: HTMLElement): Promise<void> {
 
   function renderPackStatus(M: MarketData) {
     const n = P.dataPack ? Object.keys(P.dataPack.tickers).length : 0;
-    $('packStatus').textContent = P.dataPack ? he.pack.active(n, P.dataPack.asof ?? '') : he.pack.none;
+    const dp = P.dataPack, packIso = dmyToIso(dp?.asof);
+    const older = dp && packIso ? Object.entries(dp.tickers).filter(([, t]) => t.asof && t.asof < packIso).map(([k, t]) => `${k} (${isoToDmy(t.asof as string)})`).join(', ') : '';
+    $('packStatus').textContent = dp ? he.pack.active(n, dp.asof ?? '', older) : he.pack.none;
     $('packRemove').hidden = !P.dataPack;
     void M;
   }

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { checkPack, JUMP_PCT, STALE_DAYS } from '../../src/data/packCheck';
-import { parsePackText, sanitizePack } from '../../src/data/pack';
+import { mergePack, parsePackText, sanitizePack, stampPack } from '../../src/data/pack';
 import { expectedUsClose } from '../../src/data/tradingDay';
 import { packWants } from '../../src/data/packTickers';
 import { he } from '../../src/i18n/he';
@@ -9,7 +9,7 @@ import { profile, row } from './helpers';
 const TODAY = new Date(2026, 9, 26); // 26.10.2026, local
 const pk = (o: Record<string, unknown>) => sanitizePack({ asof: '26.10.2026', ...o })!;
 const input = (raw: Record<string, unknown>, over: Partial<Parameters<typeof checkPack>[0]> = {}) => ({
-  raw, pack: pk(raw), wanted: [] as string[], expectedCur: {} as Record<string, string>, previous: null, typed: {}, typedFx: null, today: TODAY, ...over,
+  raw, pack: pk(raw), wanted: [] as string[], expectedCur: {} as Record<string, string>, merge: false, previous: null, typed: {}, typedFx: null, today: TODAY, ...over,
 });
 
 describe('parsePackText', () => {
@@ -166,5 +166,50 @@ describe('checkPack: answer older than the latest published close', () => {
   it('does not apply to an answer with no dollar entries', () => {
     const raw = { asof: '23.10.2026', tickers: { '111': { price: 10, cur: 'ILS' } } };
     expect(checkPack(input(raw, { today: later })).behindMarket).toBeNull();
+  });
+});
+
+describe('per-entry dates, stamping and merging', () => {
+  const A = pk({ asof: '23.10.2026', fx: 3.0, tickers: { AAA: { price: 10 }, BBB: { price: 20 }, CCC: { price: 30 } } });
+  const B = pk({ asof: '26.10.2026', fx: 3.1, tickers: { AAA: { price: 11 }, DDD: { price: 40 } } });
+  it('reads an entry date in either format and drops a malformed one', () => {
+    const p = sanitizePack({ tickers: { A1: { price: 1, asof: '2026-10-20' }, A2: { price: 1, asof: '20.10.2026' }, A3: { price: 1, asof: 'yesterday' } } })!;
+    expect([p.tickers.A1?.asof, p.tickers.A2?.asof, p.tickers.A3?.asof]).toEqual(['2026-10-20', '2026-10-20', undefined]);
+  });
+  it('stamps every entry with the pack date unless it has its own, and does nothing without a pack date', () => {
+    const s = stampPack(pk({ asof: '26.10.2026', tickers: { X: { price: 1 }, Y: { price: 2, asof: '2026-10-20' } } }));
+    expect([s.tickers.X?.asof, s.tickers.Y?.asof]).toEqual(['2026-10-26', '2026-10-20']);
+    const none = sanitizePack({ tickers: { X: { price: 1 } } })!;
+    expect(stampPack(none)).toBe(none);
+  });
+  it('a merge keeps what the new answer lacks (with its own date), lets new entries win, and takes pack-wide values from the new one', () => {
+    const M = mergePack(A, B);
+    expect(Object.keys(M.tickers).sort()).toEqual(['AAA', 'BBB', 'CCC', 'DDD']);
+    expect(M.tickers.AAA).toMatchObject({ price: 11, asof: '2026-10-26' });
+    expect(M.tickers.BBB).toMatchObject({ price: 20, asof: '2026-10-23' });
+    expect(M.tickers.DDD).toMatchObject({ price: 40, asof: '2026-10-26' });
+    expect(M.fx).toBe(3.1);
+    expect(M.asof).toBe('26.10.2026');
+  });
+  it('keeps the previous fx and history when the new answer has none, and never moves the pack date backwards', () => {
+    const older = pk({ asof: '20.10.2026', tickers: { ZZZ: { price: 5 } } });
+    const M = mergePack(A, older);
+    expect(M.fx).toBe(3.0);
+    expect(M.asof).toBe('23.10.2026');
+    expect(mergePack(null, B).tickers.AAA?.asof).toBe('2026-10-26');
+  });
+  it('the check lists kept entries with their age in merge mode, drops them from "missing", and flags old ones', () => {
+    const raw = { asof: '26.10.2026', tickers: { AAA: { price: 11 } } };
+    const m = checkPack(input(raw, { previous: A, merge: true, wanted: ['AAA', 'BBB', 'ZZZ'] }));
+    expect(m.kept.map((k) => [k.t, k.asofIso, k.ageDays])).toEqual([['BBB', '2026-10-23', 3], ['CCC', '2026-10-23', 3]]);
+    expect(m.missing).toEqual(['ZZZ']);
+    expect(m.dropped).toEqual([]);
+    const r = checkPack(input(raw, { previous: A, merge: false, wanted: ['AAA', 'BBB'] }));
+    expect(r.kept).toEqual([]);
+    expect(r.dropped).toEqual(['BBB', 'CCC']);
+    expect(r.missing).toEqual(['BBB']);
+    const old = checkPack(input({ asof: '26.10.2026', tickers: { AAA: { price: 11 } } }, { previous: pk({ asof: '01.10.2026', tickers: { AAA: { price: 10 }, OLD: { price: 3 } } }), merge: true }));
+    expect(old.kept[0]).toMatchObject({ t: 'OLD', ageDays: 25 });
+    expect(old.clean).toBe(false);
   });
 });

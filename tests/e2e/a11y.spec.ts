@@ -34,7 +34,7 @@ test.describe('accessibility (axe, WCAG 2.1 AA)', () => {
   });
   for (const scheme of ['light', 'dark'] as const) {
     test(`guided data update, instructions and checked preview, ${scheme}`, async ({ browser }) => {
-      const { page, close } = await openApp(browser, { profile, pack, colorScheme: scheme });
+      const { page, close } = await openApp(browser, { profile: { ...profile, dataPack: { asof: '22.10.2026', tickers: { OLDX: { price: 3 } } } }, pack, colorScheme: scheme });
       await page.locator('#storageCard summary').click();
       await page.click('#packAsk');
       await audit(page, `update panel ${scheme}`);
@@ -42,6 +42,7 @@ test.describe('accessibility (axe, WCAG 2.1 AA)', () => {
       await page.fill('#paPaste', '```json\n' + JSON.stringify(answer) + '\n```');
       await page.click('#paCheck');
       await expect(page.locator('#paPreview')).toBeVisible();
+      await expect(page.locator('#pvModeBox')).toBeVisible();
       await audit(page, `update preview ${scheme}`);
       await close();
     });

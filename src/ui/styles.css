@@ -411,3 +411,6 @@ button, .toggle-btn, summary { min-height: 24px; }
 .in-warns li { margin-bottom: 4px; }
 .in-warns li.bad, td.pv-bad { color: var(--loss-color); font-weight: 600; }
 td.pv-ok { color: var(--text-secondary); }
+.in-set { border: 0; padding: 0; margin: 8px 0; }
+.in-set legend { padding: 0; font-size: calc(12px * var(--fs)); color: var(--text-secondary); margin-bottom: 4px; }
+.in-set .in-check { display: flex; align-items: flex-start; margin-bottom: 4px; }
