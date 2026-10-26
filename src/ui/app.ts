@@ -1,7 +1,7 @@
 import { compute } from '../calc/portfolio';
 import type { MarketData, Profile } from '../calc/types';
 import { loadExampleBundle } from '../data/legacyPack';
-import { applyPack, MAX_PACK_CHARS, sanitizePack } from '../data/pack';
+import { applyPack } from '../data/pack';
 import { DataLoader } from '../data/loader';
 import { he } from '../i18n/he';
 import { blankProfile, sanitizeProfile } from '../profile/schema';
@@ -21,6 +21,7 @@ import { renderFreshness } from './sections/freshnessPanel';
 import { renderWithdrawal, syncWithdrawalInputs } from './sections/withdrawal';
 import { applyFontScale, loadFontScale, saveFontScale, type FontScale } from './prefs';
 import { wireStorageUi } from './storageUi';
+import { wirePackUpdate } from './packUpdate';
 import { wireWizard } from './wizard';
 
 type View = 'chooser' | 'gate' | 'workspace';
@@ -226,19 +227,15 @@ export async function startApp(root: HTMLElement): Promise<void> {
       $('uncMsg').textContent = he.uncovered.copyFailed;
     }
   });
+  const packUpdate = wirePackUpdate({
+    getProfile: () => P,
+    now: () => new Date(),
+    apply: (pack) => { P.dataPack = pack; afterEdit(); },
+  });
   $('packImport').addEventListener('click', () => $('packFile').click());
   $('packFile').addEventListener('change', async function (this: HTMLInputElement) {
     const f = this.files?.[0]; this.value = '';
-    if (!f) return;
-    const msg = (t: string) => { $('packMsg').textContent = t; };
-    if (f.size > MAX_PACK_CHARS * 1.5) { msg(he.pack.error.invalid); return; }
-    let raw: unknown;
-    try { raw = JSON.parse(await f.text()); } catch { msg(he.pack.error.notJson); return; }
-    const pack = sanitizePack(raw);
-    if (!pack) { msg(he.pack.error.invalid); return; }
-    P.dataPack = pack;
-    msg(he.pack.imported(Object.keys(pack.tickers).length));
-    afterEdit();
+    if (f) await packUpdate.fromFile(f);
   });
   $('packRemove').addEventListener('click', () => { P.dataPack = null; $('packMsg').textContent = he.pack.removed; afterEdit(); });
 

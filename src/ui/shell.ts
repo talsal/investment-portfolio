@@ -82,6 +82,35 @@ function freshnessCard(): Raw {
   </details>`;
 }
 
+
+/** Guided update: instructions for the user's own assistant, a paste box for the answer, and a checked preview before anything is applied. */
+function packAskPanel(): Raw {
+  const A = he.packAsk, C = he.packCheck;
+  return html`<div class="switch-panel" id="packAskBox" role="group" aria-labelledby="paH" hidden>
+    <h3 id="paH">${A.h}</h3>
+    <ol class="in-steps">${A.steps.map((x) => html`<li>${x}</li>`)}</ol>
+    <p class="in-hint">${A.privacy}</p>
+    <p class="in-hint">${A.onlyUs}</p>
+    <p class="in-hint b" id="paNone" hidden>${A.noTickers}</p>
+    <div id="paFlow">
+      <label class="in-label" for="paPrompt">${A.promptLabel}</label>
+      <textarea id="paPrompt" class="in-area" rows="8" readonly></textarea>
+      <div class="in-btns"><button type="button" class="toggle-btn" id="paCopy">${A.copy}</button></div>
+      <label class="in-label" for="paPaste">${A.pasteLabel}</label>
+      <textarea id="paPaste" class="in-area" rows="6" dir="ltr" spellcheck="false"></textarea>
+      <div class="in-btns"><button type="button" class="toggle-btn" id="paCheck">${A.check}</button><button type="button" class="toggle-btn" id="paFile">${A.fromFile}</button><button type="button" class="toggle-btn" id="paClose">${A.close}</button></div>
+    </div>
+    <p class="in-msg" id="paMsg" role="status"></p>
+    <div id="paPreview" hidden>
+      <h3 id="pvH" tabindex="-1">${C.h}</h3>
+      <p id="pvSummary"></p>
+      <div class="bf-wrap" id="pvWrap"><table class="data-table" id="pvTable"></table></div>
+      <ul class="in-warns" id="pvWarns"></ul>
+      <div class="in-btns"><button type="button" class="toggle-btn" id="pvConfirm">${C.confirm}</button><button type="button" class="toggle-btn" id="pvCancel">${C.cancel}</button></div>
+    </div>
+  </div>`;
+}
+
 function storageCard(): Raw {
   const K = he.storage.card, S = he.storage.switchPanel;
   return html`<details class="in-card" id="storageCard">
@@ -113,7 +142,9 @@ function storageCard(): Raw {
     <p class="in-hint">${he.pack.hint}</p>
     <p class="in-hint b" id="packStatus"></p>
     <div class="in-btns"><button type="button" class="toggle-btn" id="packImport">${he.pack.import}</button><input type="file" id="packFile" accept=".json,application/json" hidden aria-label="${he.pack.import}"><button type="button" class="toggle-btn" id="packRemove">${he.pack.remove}</button></div>
+    <div class="in-btns"><button type="button" class="toggle-btn" id="packAsk">${he.packAsk.open}</button></div>
     <p class="in-msg" id="packMsg" role="status"></p>
+    ${packAskPanel()}
     <h2 class="card-h">${K.eraseH}</h2>
     <div class="in-btns"><button type="button" class="toggle-btn" id="stErase">${K.erase}</button></div>
   </details>`;
@@ -162,7 +193,7 @@ export function buildShell(root: HTMLElement): void {
         <div class="cf-grid"><label>${T.withdrawal.years}<input type="text" inputmode="decimal" autocomplete="off" data-wd="years"></label><label>${T.withdrawal.rate}<input type="text" inputmode="decimal" autocomplete="off" data-wd="realRate"></label></div>
         <div class="cf-tiles" id="wdTiles"></div><p class="rate-note" id="wdNote"></p>`, { note: T.withdrawal.note, skip: true })}
     </div>
-    ${section('uncSection', T.uncovered.h, html`<p class="uncovered-list" id="uncList" dir="ltr" tabindex="-1"></p><div class="in-btns"><button type="button" class="toggle-btn" id="uncCopy">${T.uncovered.copy}</button></div><p class="in-msg" id="uncMsg" role="status"></p>`, { hidden: true, note: T.uncovered.note, skip: true })}
+    ${section('uncSection', T.uncovered.h, html`<p class="uncovered-list" id="uncList" dir="ltr" tabindex="-1"></p><div class="in-btns"><button type="button" class="toggle-btn" id="uncCopy">${T.uncovered.copy}</button><button type="button" class="toggle-btn" id="uncAsk">${T.packAsk.open}</button></div><p class="in-msg" id="uncMsg" role="status"></p>`, { hidden: true, note: T.uncovered.note, skip: true })}
     <h2 id="anaTitle" class="ana-title" hidden>${T.analysis.h}</h2>
     <div class="ana-pending" id="anaPending" hidden></div>
     ${section('bfSection', T.criteria.h, html`<div class="bf-wrap" id="bfTable"></div><h3 class="sub-h">${T.criteria.baseH}</h3><div class="bf-wrap" id="bfBase"></div><p class="rate-note" id="bfNote"></p>`, { hidden: true, note: rich(T.criteria.note({ pe: RULES.criteria.pe.maxForward, fcf: RULES.criteria.fcf.minYieldPct })) })}

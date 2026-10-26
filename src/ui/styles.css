@@ -403,3 +403,11 @@ button, .toggle-btn, summary { min-height: 24px; }
 .wz-status { min-height: 1.2em; }
 .wz-nav { margin-top: 16px; }
 .wz-primary { font-weight: 700; border-color: var(--link); }
+/* ---- guided data update ---- */
+.in-steps { margin: 0 0 8px; padding-inline-start: 22px; font-size: calc(12.5px * var(--fs)); color: var(--text-secondary); }
+.in-label { display: block; margin: 10px 0 3px; font-size: calc(12px * var(--fs)); color: var(--text-secondary); }
+.in-area { width: 100%; box-sizing: border-box; font: inherit; font-size: calc(12.5px * var(--fs)); padding: 8px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface-2); color: var(--text-primary); resize: vertical; }
+.in-warns { margin: 8px 0; padding-inline-start: 20px; font-size: calc(12.5px * var(--fs)); }
+.in-warns li { margin-bottom: 4px; }
+.in-warns li.bad, td.pv-bad { color: var(--loss-color); font-weight: 600; }
+td.pv-ok { color: var(--text-secondary); }

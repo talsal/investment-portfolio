@@ -32,6 +32,20 @@ test.describe('accessibility (axe, WCAG 2.1 AA)', () => {
     await audit(page, 'empty workspace');
     await close();
   });
+  for (const scheme of ['light', 'dark'] as const) {
+    test(`guided data update, instructions and checked preview, ${scheme}`, async ({ browser }) => {
+      const { page, close } = await openApp(browser, { profile, pack, colorScheme: scheme });
+      await page.locator('#storageCard summary').click();
+      await page.click('#packAsk');
+      await audit(page, `update panel ${scheme}`);
+      const answer = { asof: '23.10.2026', fx: 3.5, tickers: { AAPL: { price: 500, cur: 'ILS' } } };
+      await page.fill('#paPaste', '```json\n' + JSON.stringify(answer) + '\n```');
+      await page.click('#paCheck');
+      await expect(page.locator('#paPreview')).toBeVisible();
+      await audit(page, `update preview ${scheme}`);
+      await close();
+    });
+  }
   test('full dashboard, light', async ({ browser }) => {
     const { page, close } = await openApp(browser, { profile, pack });
     await openAll(page);

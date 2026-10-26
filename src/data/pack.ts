@@ -89,7 +89,7 @@ export function sanitizePack(o: unknown): MarketData | null {
   return useful ? M : null;
 }
 
-const dmyToIso = (s: string | undefined): string | null => (s && /^\d{2}\.\d{2}\.\d{4}$/.test(s) ? `${s.slice(6)}-${s.slice(3, 5)}-${s.slice(0, 2)}` : null);
+export const dmyToIso = (s: string | undefined): string | null => (s && /^\d{2}\.\d{2}\.\d{4}$/.test(s) ? `${s.slice(6)}-${s.slice(3, 5)}-${s.slice(0, 2)}` : null);
 
 /** Layers the personal pack over the site's data: anything the pack provides wins, the rest stays. */
 export function applyPack(base: MarketData, pack: MarketData): MarketData {
@@ -110,4 +110,20 @@ export function applyPack(base: MarketData, pack: MarketData): MarketData {
     personalPack: { asof: dmyToIso(pack.asof) },
   };
   return M;
+}
+
+export type PackTextResult = { ok: true; value: unknown } | { ok: false; error: 'empty' | 'tooBig' | 'notJson' };
+
+/** Reads what a chat assistant typically returns: bare JSON, a ```json fence, or JSON with a sentence around it. */
+export function parsePackText(text: string): PackTextResult {
+  const t = text.trim();
+  if (!t) return { ok: false, error: 'empty' };
+  if (t.length > MAX_PACK_CHARS * 1.5) return { ok: false, error: 'tooBig' };
+  const tries: string[] = [t];
+  const fence = /```(?:json)?\s*([\s\S]*?)```/i.exec(t);
+  if (fence?.[1]) tries.push(fence[1].trim());
+  const a = t.indexOf('{'), b = t.lastIndexOf('}');
+  if (a >= 0 && b > a) tries.push(t.slice(a, b + 1));
+  for (const c of tries) { try { return { ok: true, value: JSON.parse(c) }; } catch { /* try the next shape */ } }
+  return { ok: false, error: 'notJson' };
 }

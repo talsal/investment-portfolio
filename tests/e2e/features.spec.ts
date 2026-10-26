@@ -111,7 +111,8 @@ test.describe('personal data pack', () => {
     await expect(page.locator('#bfSection')).toBeHidden();
     await page.locator('#storageCard summary').click();
     await page.locator('#packFile').setInputFiles(packFile());
-    await expect(page.locator('#packMsg')).toContainText('החבילה נטענה');
+    await page.click('#pvConfirm');
+    await expect(page.locator('#paMsg')).toContainText('החבילה עודכנה');
     await expect(page.locator('#bfSection')).toBeVisible();
     await expect(page.locator('#bfTable')).toContainText('ALFA');
     await expect(page.locator('#bmSection')).toBeVisible();
@@ -136,6 +137,7 @@ test.describe('personal data pack', () => {
     const { page, close } = await openApp(browser, { profile: { rows }, pack, files: emptySite() });
     await page.locator('#storageCard summary').click();
     await page.locator('#packFile').setInputFiles(packFile());
+    await page.click('#pvConfirm');
     await expect(page.locator('#bfSection')).toBeVisible();
     await page.waitForTimeout(800);
     await page.reload();
@@ -151,9 +153,9 @@ test.describe('personal data pack', () => {
     const { page, close } = await openApp(browser, { profile: { rows }, pack, files: emptySite() });
     await page.locator('#storageCard summary').click();
     await page.locator('#packFile').setInputFiles({ name: 'x.json', mimeType: 'application/json', buffer: Buffer.from('{"hello":1}') });
-    await expect(page.locator('#packMsg')).toContainText('אינו חבילת נתונים תקינה');
+    await expect(page.locator('#paMsg')).toContainText('אינו חבילת נתונים תקינה');
     await page.locator('#packFile').setInputFiles({ name: 'x.json', mimeType: 'application/json', buffer: Buffer.from('nope') });
-    await expect(page.locator('#packMsg')).toContainText('אינו JSON תקין');
+    await expect(page.locator('#paMsg')).toContainText('לא נמצא JSON');
     await expect(page.locator('#packStatus')).toContainText('אין חבילה אישית');
     await close();
   });
@@ -163,6 +165,7 @@ test.describe('personal data pack', () => {
     await page.click('#gateNew');
     await page.locator('#storageCard summary').click();
     await page.locator('#packFile').setInputFiles(packFile());
+    await page.click('#pvConfirm');
     await expect(page.locator('#packStatus')).toContainText('חבילה אישית פעילה');
     expect(await page.evaluate(() => Object.keys(localStorage).sort())).toEqual(['portfolio.mode']);
     const [dl] = await Promise.all([page.waitForEvent('download'), page.click('#stExport')]);

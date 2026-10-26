@@ -20,6 +20,8 @@ withdrawal estimate. It started as a single-file prototype; this repository is t
    "load example data" to see everything with invented numbers, and clear it afterwards.
 3. Prices are typed by you. Where the site has data for a ticker it can fill a blank price and show the analysis columns;
    other tickers still work, with "no analysis available" and a link to request them.
+4. To refresh prices without typing them: *Prepare update instructions* gives a text for your own AI assistant (symbols and date only).
+   Paste its answer back, review the checked preview (suspicious jumps, old dates, missing tickers) and confirm.
 
 ## Free by design
 
