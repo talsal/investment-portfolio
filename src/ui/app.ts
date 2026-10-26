@@ -1,4 +1,4 @@
-import { compute } from '../calc/portfolio';
+import { compute, packCurrency } from '../calc/portfolio';
 import type { MarketData, Profile } from '../calc/types';
 import { loadExampleBundle } from '../data/legacyPack';
 import { applyPack } from '../data/pack';
@@ -136,7 +136,8 @@ export async function startApp(root: HTMLElement): Promise<void> {
   function fillPricePlaceholders({ C, M }: Ctx) {
     document.querySelectorAll<HTMLInputElement>('[data-g="rows"][data-f="p"]').forEach((el) => {
       const row = P.rows[Number(el.dataset.i)];
-      const pk = row && row.c === 'USD' ? M.tickers[row.t.toUpperCase().replace(/\s+/g, '')] : undefined;
+      const found = row ? M.tickers[row.t.toUpperCase().replace(/\s+/g, '')] : undefined;
+      const pk = row && found && packCurrency(found) === row.c ? found : undefined;
       el.placeholder = !row?.p && pk ? he.pack.autoPrice(pk.price.toFixed(2)) : '';
     });
     void C;

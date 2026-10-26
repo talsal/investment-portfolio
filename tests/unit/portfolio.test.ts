@@ -24,12 +24,28 @@ describe('compute', () => {
     const C = compute(profile({ rows: [row({ c: 'ILS', t: '1234567', q: '10', p: '50' }), row({ c: 'AGO', t: '7654321', q: '10', p: '5000' })] }), market());
     expect(C.items.map((i) => i.valNis).sort()).toEqual([500, 500]);
   });
-  it('falls back to the pack price only for USD rows with a blank price', () => {
+  it('falls back to the pack price only when the pack states the same currency as the row (no currency = USD)', () => {
     const M = market({ tickers: { AAA: { price: 50, cur: 'USD' }, BBB: { price: 50, cur: 'ILS' } } });
     const C = compute(profile({ fx: '2', rows: [row({ t: 'aaa', q: '2' }), row({ t: 'BBB', q: '2' }), row({ t: 'AAA', c: 'ILS', q: '2' })] }), M);
     expect(C.items).toHaveLength(1);
     expect(C.items[0]?.valNis).toBe(200);
     expect(C.held[0]?.px).toBe(50);
+  });
+  it('prices Israeli securities from the pack in shekels and in agorot, and never when the units differ', () => {
+    const M = market({ tickers: { '111': { price: 42.5, cur: 'ILS' }, '222': { price: 4250, cur: 'AGO' }, '333': { price: 4250, cur: 'ILS' }, '444': { price: 9 }, '555': { price: 7, cur: 'ILS' } } });
+    const rows = [
+      row({ t: '111', c: 'ILS', q: '10' }), row({ t: '222', c: 'AGO', q: '10' }), // same currency: used
+      row({ t: '333', c: 'AGO', q: '10' }),                                       // pack says shekels, row is agorot: not used
+      row({ t: '444', c: 'ILS', q: '10' }),                                       // pack says nothing (dollars): not used
+      row({ t: '555', c: 'ILS', q: '10', p: '8' }),                               // the user's own price always wins
+    ];
+    const C = compute(profile({ fx: '3', rows }), M);
+    const by = (t: string) => C.items.find((i) => i.ticker === t)?.valNis;
+    expect(by('111')).toBe(425);
+    expect(by('222')).toBeCloseTo(425, 10);
+    expect(by('333')).toBeUndefined();
+    expect(by('444')).toBeUndefined();
+    expect(by('555')).toBe(80);
   });
   it('skips rows without a positive value', () => {
     const C = compute(profile({ rows: [row({ q: '0', p: '5' }), row({ q: '5' }), row({ q: '-1', p: '2' })] }), market());

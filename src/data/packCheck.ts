@@ -11,7 +11,11 @@ export const STALE_DAYS = 7;
 export interface PackCheckRow {
   t: string; price: number; cur: string | null;
   ref: number | null; refFrom: 'pack' | 'typed' | null;
-  changePct: number | null; jump: boolean; notUsd: boolean;
+  changePct: number | null; jump: boolean;
+  /** The currency the form row is priced in, and the one the answer states (null = not stated, read as USD). */
+  expected: string; stated: string | null; curMismatch: boolean;
+  /** The price is about 100x (or 1/100) the reference: likely agorot mixed up with shekels. */
+  unitMix: boolean;
 }
 export interface PackCheck {
   rows: PackCheckRow[];
@@ -32,8 +36,10 @@ export interface PackCheck {
 export interface PackCheckInput {
   raw: unknown;
   pack: MarketData;
-  /** Tickers the user holds in dollars or follows. */
+  /** Tickers the user holds or follows. */
   wanted: string[];
+  /** The currency each form row is priced in (USD, ILS or AGO); tickers not listed are read as USD. */
+  expectedCur: Record<string, string>;
   /** Previous pack (if any) and the prices the user typed, used as references. */
   previous: MarketData | null;
   typed: Record<string, number>;
@@ -51,7 +57,10 @@ export function checkPack(i: PackCheckInput): PackCheck {
     const ref = prevPrice && prevPrice > 0 ? prevPrice : typed && typed > 0 ? typed : null;
     const refFrom = prevPrice && prevPrice > 0 ? 'pack' : ref ? 'typed' : null;
     const changePct = ref ? ((p.price - ref) / ref) * 100 : null;
-    return { t, price: p.price, cur: p.cur ?? null, ref, refFrom, changePct, jump: changePct !== null && Math.abs(changePct) > JUMP_PCT, notUsd: !!p.cur && p.cur !== 'USD' };
+    const expected = i.expectedCur[t] ?? 'USD', stated = p.cur ?? null;
+    const ratio = ref ? p.price / ref : null;
+    const unitMix = ratio !== null && ((ratio >= 90 && ratio <= 110) || (ratio >= 1 / 110 && ratio <= 1 / 90));
+    return { t, price: p.price, cur: stated, ref, refFrom, changePct, jump: changePct !== null && Math.abs(changePct) > JUMP_PCT, expected, stated, curMismatch: (stated ?? 'USD') !== expected, unitMix };
   });
   const have = new Set(Object.keys(i.pack.tickers));
   const rawTickers = (i.raw && typeof i.raw === 'object' ? (i.raw as { tickers?: unknown }).tickers : undefined);
@@ -72,6 +81,6 @@ export function checkPack(i: PackCheckInput): PackCheck {
   const fxRef = i.typedFx ?? i.previous?.fx ?? null;
   const fx = i.pack.fx && fxRef ? { value: i.pack.fx, ref: fxRef, jump: Math.abs((i.pack.fx - fxRef) / fxRef) * 100 > FX_JUMP_PCT } : null;
 
-  const clean = !rows.some((r) => r.jump || r.notUsd) && !missing.length && !rejected.length && !noDate && !stale && !future && !fx?.jump;
+  const clean = !rows.some((r) => r.jump || r.curMismatch) && !missing.length && !rejected.length && !noDate && !stale && !future && !fx?.jump;
   return { rows, missing, rejected, dropped, extra, asofIso, ageDays, noDate, stale, future, fx, clean };
 }

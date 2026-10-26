@@ -109,14 +109,16 @@ row says "no analysis available", with a link to the *Request a ticker* issue fo
 ## Customer-side update (bring your own AI)
 
 For people who load their own file, the site does not distribute third-party prices. Instead the storage card has
-*Prepare update instructions*: it builds a text containing only the dollar tickers (holdings and watchlist) and today's
-date, which the user pastes into their own assistant. The answer is pasted back (or imported from a file) and goes through
+*Prepare update instructions*: it builds a text containing the symbols of the holdings and the watchlist, for Israeli
+securities also the number and the name the user typed, the currency each row is priced in (dollars, shekels or agorot) and
+today's date, which the user pastes into their own assistant. The answer is pasted back (or imported from a file) and goes through
 `parsePackText` (bare JSON, a fenced block, or JSON inside a sentence), the strict `sanitizePack`, and `checkPack`
 (`src/data/packCheck.ts`) before anything is applied. The preview shows each price against the previous pack or the price
 the user typed, and flags: a move above `JUMP_PCT` (25%), data older than `STALE_DAYS` (7), a missing or future date, a
-dollar rate that moved more than 5%, requested tickers that did not arrive, entries the reader rejected, a non-dollar
-currency, and tickers that exist in the old pack but would disappear. Nothing is applied until the user confirms, and the
+dollar rate that moved more than 5%, requested tickers that did not arrive, entries the reader rejected, a price quoted
+in a currency other than the row's, a ratio near 100 against the previous price (agorot mixed up with shekels), and tickers that exist in the old pack but would disappear. Nothing is applied until the user confirms, and the
 site sends nothing: the user copies and pastes. Thresholds are sanity checks, not calculation rules.
 
-The text asks for prices, dividends, next earnings dates and the dollar rate only; fundamentals and qualitative analysis
+A pack price is used for a row with a blank price only when the pack states the same currency as the row (see
+`docs/rules.md`, "Currency"). The text asks for prices, dividends and earnings dates (the last two for US stocks only) and the dollar rate; fundamentals and qualitative analysis
 are not requested from a user's assistant because they cannot be sanity-checked the same way.

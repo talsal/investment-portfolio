@@ -11,7 +11,7 @@ const rows = [
   { n: 'Il', t: '1234567', c: 'ILS', ty: 'eq', q: '4242', k: '1', p: '2' },
 ];
 const answer = (o: Record<string, unknown>) => 'הנה הנתונים:\n```json\n' + JSON.stringify(o) + '\n```\nבהצלחה!';
-const good = { asof: '23.10.2026', fx: 3.1, tickers: { ALFA: { name: 'Alfa', cur: 'USD', price: 52 }, BETA: { name: 'Beta', cur: 'USD', price: 101 } } };
+const good = { asof: '23.10.2026', fx: 3.1, tickers: { ALFA: { name: 'Alfa', cur: 'USD', price: 52 }, BETA: { name: 'Beta', cur: 'USD', price: 101 }, '1234567': { name: 'Il', cur: 'ILS', price: 2.1 } } };
 
 async function openAsk(page: import('@playwright/test').Page) {
   await page.locator('#storageCard summary').click();
@@ -23,9 +23,10 @@ test.describe('guided data update', () => {
     const { page, errors, close } = await openApp(browser, { profile: { rows, cashUsd: '98765', mmf: '55555' }, pack, files: emptySite() });
     await openAsk(page);
     const text = await page.inputValue('#paPrompt');
-    expect(text).toContain('ALFA, BETA');
+    expect(text).toContain('מניות בדולרים: ALFA, BETA');
+    expect(text).toContain('- 1234567 | Il | בשקלים, cur "ILS"');
     expect(text).toContain('23.10.2026');
-    for (const secret of ['7919', '31 ', '4242', '98765', '55555', '1234567']) expect(text).not.toContain(secret);
+    for (const secret of ['7919', '4242', '98765', '55555']) expect(text).not.toContain(secret);
     expect(errors).toEqual([]);
     await close();
   });
@@ -54,7 +55,7 @@ test.describe('guided data update', () => {
     await expect(page.locator('#pvWarns')).toContainText('לא נמצאו ערכים חשודים');
     await expect(page.locator('#packStatus')).toContainText('אין חבילה אישית'); // nothing applied yet
     await page.click('#pvConfirm');
-    await expect(page.locator('#paMsg')).toContainText('החבילה עודכנה (2 ניירות)');
+    await expect(page.locator('#paMsg')).toContainText('החבילה עודכנה (3 ניירות)');
     await expect(page.locator('#packStatus')).toContainText('חבילה אישית פעילה');
     await expect(page.locator('[data-g="rows"][data-i="1"][data-f="p"]')).toHaveAttribute('placeholder', /101\.00.*\(אוטומטי\)/);
     expect(errors).toEqual([]);
@@ -69,7 +70,7 @@ test.describe('guided data update', () => {
     await expect(page.locator('#pvTable')).toContainText('+900.0%');
     const warns = page.locator('#pvWarns');
     await expect(warns).toContainText('הנתונים ישנים');
-    await expect(warns).toContainText('לא התקבל מחיר עבור: BETA');
+    await expect(warns).toContainText('לא התקבל מחיר עבור: 1234567, BETA');
     await expect(warns).toContainText('שער הדולר');
     await expect(page.locator('#pvTable')).toContainText('שינוי חריג של 900%');
     await expect(warns).not.toContainText('לא נמצאו ערכים חשודים');
@@ -103,8 +104,8 @@ test.describe('guided data update', () => {
     await close();
   });
 
-  test('with no dollar holdings there is nothing to ask for, and the uncovered list opens the same panel', async ({ browser }) => {
-    const none = await openApp(browser, { profile: { rows: [rows[2]] }, pack, files: emptySite() });
+  test('with nothing in the portfolio there is nothing to ask for, and the uncovered list opens the same panel', async ({ browser }) => {
+    const none = await openApp(browser, { profile: { rows: [] }, pack, files: emptySite() });
     await openAsk(none.page);
     await expect(none.page.locator('#paNone')).toBeVisible();
     await expect(none.page.locator('#paFlow')).toBeHidden();
@@ -114,6 +115,31 @@ test.describe('guided data update', () => {
     await expect(unc.page.locator('#packAskBox')).toBeVisible();
     await expect(unc.page.inputValue('#paPrompt')).resolves.toContain('ZZZZ');
     await unc.close();
+  });
+
+  test('Israeli securities: a shekel price is used, a wrong currency is flagged and not used, an agorot mix-up is called out', async ({ browser }) => {
+    const il = [
+      { n: 'Il', t: '1234567', c: 'ILS', ty: 'eq', q: '10', k: '40', p: '' },
+      { n: 'Ag', t: '7654321', c: 'AGO', ty: 'eq', q: '10', k: '4000', p: '4000' },
+    ];
+    const { page, errors, close } = await openApp(browser, { profile: { rows: il }, pack, files: emptySite() });
+    await openAsk(page);
+    const text = await page.inputValue('#paPrompt');
+    expect(text).toContain('- 7654321 | Ag | באגורות, cur "AGO"');
+    await page.fill('#paPaste', answer({ asof: '23.10.2026', tickers: { '1234567': { cur: 'ILS', price: 42.5 }, '7654321': { cur: 'ILS', price: 40.5 } } }));
+    await page.click('#paCheck');
+    await expect(page.locator('#pvTable')).toContainText('המטבע בתשובה (ILS) שונה ממטבע השורה בטופס (AGO)');
+    await page.fill('#paPaste', answer({ asof: '23.10.2026', tickers: { '1234567': { cur: 'ILS', price: 42.5 }, '7654321': { cur: 'AGO', price: 40.5 } } }));
+    await page.click('#paCheck');
+    await expect(page.locator('#pvTable')).toContainText('ערבוב בין אגורות לשקלים'); // 40.5 against the typed 4000 agorot
+    await page.fill('#paPaste', answer({ asof: '23.10.2026', tickers: { '1234567': { cur: 'ILS', price: 42.5 }, '7654321': { cur: 'AGO', price: 4050 } } }));
+    await page.click('#paCheck');
+    await expect(page.locator('#pvWarns')).toContainText('לא נמצאו ערכים חשודים');
+    await page.click('#pvConfirm');
+    await expect(page.locator('[data-g="rows"][data-i="0"][data-f="p"]')).toHaveAttribute('placeholder', /42\.50.*\(אוטומטי\)/);
+    await expect(page.locator('#uncSection')).toBeHidden();
+    expect(errors).toEqual([]);
+    await close();
   });
 
   test('fits a 360px phone screen with the preview open (no horizontal page scroll)', async ({ browser }) => {

@@ -1,14 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { checkPack, JUMP_PCT, STALE_DAYS } from '../../src/data/packCheck';
 import { parsePackText, sanitizePack } from '../../src/data/pack';
-import { packTickers } from '../../src/data/packTickers';
+import { packWants } from '../../src/data/packTickers';
 import { he } from '../../src/i18n/he';
 import { profile, row } from './helpers';
 
 const TODAY = new Date(2026, 9, 26); // 26.10.2026, local
 const pk = (o: Record<string, unknown>) => sanitizePack({ asof: '26.10.2026', ...o })!;
 const input = (raw: Record<string, unknown>, over: Partial<Parameters<typeof checkPack>[0]> = {}) => ({
-  raw, pack: pk(raw), wanted: [] as string[], previous: null, typed: {}, typedFx: null, today: TODAY, ...over,
+  raw, pack: pk(raw), wanted: [] as string[], expectedCur: {} as Record<string, string>, previous: null, typed: {}, typedFx: null, today: TODAY, ...over,
 });
 
 describe('parsePackText', () => {
@@ -27,26 +27,44 @@ describe('parsePackText', () => {
   });
 });
 
-describe('packTickers and the instructions text', () => {
+describe('packWants and the instructions text', () => {
   const P = profile({
-    rows: [row({ t: 'aaa', q: '123456', k: '777' }), row({ t: 'AAA' }), row({ t: 'BB B', c: 'USD' }), row({ t: '1234567', c: 'ILS' }), row({ t: 'ZZZ', c: 'AGO' }), row({ t: '' })],
+    rows: [
+      row({ n: 'Alpha', t: 'aaa', q: '123456', k: '777' }), row({ t: 'AAA' }), row({ t: 'BB B', c: 'USD' }),
+      row({ n: 'סל "ישראלי"\nשורה', t: '1234567', c: 'ILS', q: '4242' }), row({ n: 'Agorot fund', t: '7654321', c: 'AGO' }), row({ t: '' }), row({ t: 'bad key!', c: 'ILS' }),
+    ],
     watchlist: ['ccc', 'bad key!'],
     cashUsd: '98765', mmf: '55555',
   });
-  it('asks only for dollar holdings and the watchlist, as symbols', () => {
-    expect(packTickers(P)).toEqual(['AAA', 'BBB', 'CCC']);
+  it('asks for every holding with the currency of its row, plus the watchlist in dollars', () => {
+    expect(packWants(P)).toEqual([
+      { t: '1234567', cur: 'ILS', name: 'סל ישראלי שורה' },
+      { t: '7654321', cur: 'AGO', name: 'Agorot fund' },
+      { t: 'AAA', cur: 'USD', name: 'Alpha' },
+      { t: 'BBB', cur: 'USD', name: '' },
+      { t: 'CCC', cur: 'USD', name: '' },
+    ]);
   });
-  it('the text for the assistant carries symbols and the date, and nothing else from the profile', () => {
-    const text = he.packAsk.prompt(packTickers(P), '26.10.2026');
-    expect(text).toContain('AAA, BBB, CCC');
+  it('the text for the assistant carries symbols, names, row currencies and the date, and no amounts', () => {
+    const text = he.packAsk.prompt(packWants(P), '26.10.2026');
+    expect(text).toContain('מניות בדולרים: AAA, BBB, CCC');
+    expect(text).toContain('- 1234567 | סל ישראלי שורה | בשקלים, cur "ILS"');
+    expect(text).toContain('- 7654321 | Agorot fund | באגורות, cur "AGO"');
     expect(text).toContain('26.10.2026');
-    for (const secret of ['123456', '777', '98765', '55555', '1234567']) expect(text).not.toContain(secret);
+    for (const secret of ['123456 ', '777', '98765', '55555', '4242']) expect(text).not.toContain(secret);
+  });
+  it('omits the Israeli block when there are none, and the dollar line when there are none', () => {
+    const us = he.packAsk.prompt([{ t: 'AAA', cur: 'USD', name: '' }], '26.10.2026');
+    expect(us).not.toContain('ניירות ישראליים (');
+    const il = he.packAsk.prompt([{ t: '1234567', cur: 'ILS', name: 'X' }], '26.10.2026');
+    expect(il).not.toContain('מניות בדולרים:');
+    expect(il).toContain('"1234567": {');
   });
   it('the example structure in the instructions is itself readable by the strict reader once filled in', () => {
-    const text = he.packAsk.prompt(['AAA'], '26.10.2026');
+    const text = he.packAsk.prompt([{ t: 'AAA', cur: 'USD', name: '' }], '26.10.2026');
     const block = text.slice(text.indexOf('{\n'));
     const nums = ['3.1', '12.5', '0.5', '4'];
-    const filled = block.replace(/<DD\.MM\.YYYY>/, '26.10.2026').replace(/<YYYY-MM-DD>/, '2026-11-03').replace(/<שם החברה>/, 'Alpha').replace(/<טקסט קצר>/, 'Q3').replace(/<מספר>/g, () => nums.shift() as string);
+    const filled = block.replace(/<DD\.MM\.YYYY>/, '26.10.2026').replace(/<YYYY-MM-DD>/, '2026-11-03').replace(/<שם הנייר>/, 'Alpha').replace(/<טקסט קצר>/, 'Q3').replace(/<מספר>/g, () => nums.shift() as string);
     const pack = sanitizePack(JSON.parse(filled))!;
     expect(pack.fx).toBe(3.1);
     expect(pack.tickers.AAA).toMatchObject({ price: 12.5, cur: 'USD', div: { perShare: 0.5, freq: 4 }, events: [{ d: '2026-11-03', what: 'Q3', st: 'confirmed' }] });
@@ -86,12 +104,28 @@ describe('checkPack', () => {
     expect(checkPack(input({ asof: `${26 - STALE_DAYS}.10.2026`, tickers: tk })).stale).toBe(false);
     expect(checkPack(input({ asof: '09.11.2026', tickers: tk })).future).toBe(true);
   });
-  it('flags a large move in the dollar rate and a pack priced in a currency other than dollars', () => {
-    const r = checkPack(input({ asof: '26.10.2026', fx: 3.5, tickers: { AAA: { price: 10, cur: 'ILS' } } }, { typedFx: 3.0 }));
-    expect(r.fx).toMatchObject({ jump: true });
-    expect(r.rows[0]).toMatchObject({ notUsd: true });
-    expect(r.clean).toBe(false);
+  it('flags a large move in the dollar rate', () => {
+    expect(checkPack(input({ asof: '26.10.2026', fx: 3.5, tickers: { AAA: { price: 10 } } }, { typedFx: 3.0 })).fx).toMatchObject({ jump: true });
     expect(checkPack(input({ asof: '26.10.2026', fx: 3.05, tickers: { AAA: { price: 10 } } }, { typedFx: 3.0 })).fx).toMatchObject({ jump: false });
+  });
+  it('flags a currency that differs from the row, and treats a missing currency as dollars', () => {
+    const raw = { asof: '26.10.2026', tickers: { US: { price: 1 }, IL: { price: 2, cur: 'ILS' }, AG: { price: 3, cur: 'ILS' }, NOCUR: { price: 4 } } };
+    const r = checkPack(input(raw, { expectedCur: { IL: 'ILS', AG: 'AGO', NOCUR: 'ILS' } }));
+    const by = (t: string) => r.rows.find((x) => x.t === t)!;
+    expect(by('US')).toMatchObject({ curMismatch: false, expected: 'USD' });
+    expect(by('IL')).toMatchObject({ curMismatch: false });
+    expect(by('AG')).toMatchObject({ curMismatch: true, expected: 'AGO', stated: 'ILS' });
+    expect(by('NOCUR')).toMatchObject({ curMismatch: true, stated: null });
+    expect(r.clean).toBe(false);
+  });
+  it('spots a probable agorot/shekel mix-up: a price about 100x or 1/100 of the reference', () => {
+    const raw = { asof: '26.10.2026', tickers: { UP: { price: 4250 }, DOWN: { price: 0.4 }, NORMAL: { price: 60 }, BIG: { price: 700 } } };
+    const r = checkPack(input(raw, { typed: { UP: 42.5, DOWN: 40, NORMAL: 42.5, BIG: 7 } }));
+    const by = (t: string) => r.rows.find((x) => x.t === t)!;
+    expect(by('UP')).toMatchObject({ unitMix: true, jump: true });
+    expect(by('DOWN')).toMatchObject({ unitMix: true, jump: true });
+    expect(by('NORMAL')).toMatchObject({ unitMix: false, jump: true });
+    expect(by('BIG')).toMatchObject({ unitMix: true });
   });
   it('reports nothing wrong for a sensible answer', () => {
     const previous = pk({ tickers: { AAA: { price: 10 } } });

@@ -19,7 +19,7 @@ silently: change it in `config/rules.json`, update this table, and the Hebrew te
 | Dividends | annual = last payment x payments per year x quantity (default 4); net view uses ~25% tax | `calc/dividends.ts` |
 | Default USD/ILS | 3.11 when neither the user nor the data gives a rate | `calc/portfolio.ts` |
 | Equity share | funds count by their entered equity %; a fund without a % counts as non-equity; bonds use only user-entered prices | `calc/portfolio.ts` |
-| Currency | `AGO` = agorot (x 0.01); a blank price falls back to the data's price only for USD rows | `calc/portfolio.ts` |
+| Currency | `AGO` = agorot (x 0.01); a blank price falls back to the data's price only when the data states the same currency as the row (an entry with no currency counts as USD). Extended from "USD rows only" with the owner's approval (2026-10-26) so a personal pack can price Israeli securities; the update preview flags a 100x ratio as a probable agorot/shekel mix-up | `calc/portfolio.ts` |
 
 Preserved quirks (flagged in the plan, kept for parity): annualisation uses only the trades you entered while the cumulative
 return covers every holding with a cost; the bond bucket ignores the price fallback.

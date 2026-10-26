@@ -2,7 +2,7 @@ import type { MarketData, Profile } from '../calc/types';
 import { nz } from '../calc/num';
 import { checkPack, type PackCheck } from '../data/packCheck';
 import { MAX_PACK_CHARS, parsePackText, sanitizePack } from '../data/pack';
-import { packTickers } from '../data/packTickers';
+import { packWants } from '../data/packTickers';
 import { he } from '../i18n/he';
 import { $ } from './dom';
 
@@ -26,10 +26,10 @@ export function wirePackUpdate(h: PackUpdateHooks): { open(): void; fromFile(f: 
   function open(): void {
     const details = $('storageCard') as HTMLDetailsElement;
     details.open = true;
-    const tickers = packTickers(h.getProfile());
-    $('paNone').hidden = tickers.length > 0;
-    $('paFlow').hidden = tickers.length === 0;
-    ($('paPrompt') as HTMLTextAreaElement).value = tickers.length ? A.prompt(tickers, dmy(h.now())) : '';
+    const wants = packWants(h.getProfile());
+    $('paNone').hidden = wants.length > 0;
+    $('paFlow').hidden = wants.length === 0;
+    ($('paPrompt') as HTMLTextAreaElement).value = wants.length ? A.prompt(wants, dmy(h.now())) : '';
     resetPreview();
     msg('');
     $('packAskBox').hidden = false;
@@ -41,9 +41,10 @@ export function wirePackUpdate(h: PackUpdateHooks): { open(): void; fromFile(f: 
     const typed: Record<string, number> = {};
     for (const r of P.rows) {
       const t = r.t.toUpperCase().replace(/\s+/g, '');
-      if (r.c === 'USD' && nz(r.p) > 0 && !(t in typed)) typed[t] = nz(r.p);
+      if (nz(r.p) > 0 && !(t in typed)) typed[t] = nz(r.p);
     }
-    const res = checkPack({ raw, pack, wanted: packTickers(P), previous: P.dataPack, typed, typedFx: nz(P.fx) > 0 ? nz(P.fx) : null, today: h.now() });
+    const wants = packWants(P);
+    const res = checkPack({ raw, pack, wanted: wants.map((w) => w.t), expectedCur: Object.fromEntries(wants.map((w) => [w.t, w.cur])), previous: P.dataPack, typed, typedFx: nz(P.fx) > 0 ? nz(P.fx) : null, today: h.now() });
     pending = pack;
     paint(res, pack);
   }
@@ -61,7 +62,12 @@ export function wirePackUpdate(h: PackUpdateHooks): { open(): void; fromFile(f: 
       cell(r.price.toFixed(2), 'num', true);
       cell(r.ref ? `${r.ref.toFixed(2)}` : '-', 'num', true).title = r.refFrom === 'pack' ? C.refPack : r.refFrom === 'typed' ? C.refTyped : C.noRef;
       cell(r.changePct === null ? '-' : pct(r.changePct), `num${r.jump ? ' pv-bad' : ''}`, true);
-      cell(r.jump && r.changePct !== null ? C.jump(Math.round(Math.abs(r.changePct))) : r.notUsd ? C.notUsd : r.ref ? '' : C.noRef, r.jump || r.notUsd ? 'pv-bad' : 'pv-ok');
+      const notes = [
+        ...(r.unitMix ? [C.unitMix] : r.jump && r.changePct !== null ? [C.jump(Math.round(Math.abs(r.changePct)))] : []),
+        ...(r.curMismatch ? [C.curMismatch(r.stated ?? C.noCur, r.expected)] : []),
+        ...(!r.ref && !r.curMismatch ? [C.noRef] : []),
+      ];
+      cell(notes.join(' '), r.jump || r.curMismatch ? 'pv-bad' : 'pv-ok');
     }
     const W = C.warn, list = $('pvWarns'); list.replaceChildren();
     const add = (t: string, bad = true) => { const li = document.createElement('li'); li.textContent = t; if (bad) li.className = 'bad'; list.append(li); };

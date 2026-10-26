@@ -61,6 +61,9 @@ export function lookupPack(M: MarketData, t: unknown): TickerPack | null {
   return Object.prototype.hasOwnProperty.call(M.tickers, k) ? (M.tickers[k] ?? null) : null;
 }
 
+/** The currency a pack entry's price is quoted in; an entry that does not say is read as dollars. */
+export const packCurrency = (pk: TickerPack): string => pk.cur || 'USD';
+
 export function currencyFactor(c: Currency, fx: number): number {
   return c === 'ILS' ? 1 : c === 'AGO' ? RULES.currency.agorotFactor : fx;
 }
@@ -82,8 +85,8 @@ export function compute(P: Profile, M: MarketData): Computed {
     const pk = lookupPack(M, r.t);
     const q = nz(r.q), k = nz(r.k), m = currencyFactor(r.c, fx);
     let px = nz(r.p);
-    // Price fallback: only for USD rows whose pack entry is also USD.
-    if (!px && pk && pk.price > 0 && r.c === 'USD' && (pk.cur || 'USD') === 'USD') px = pk.price;
+    // Price fallback: only when the pack entry states the same currency as the row (a pack entry with no currency means USD).
+    if (!px && pk && pk.price > 0 && packCurrency(pk) === r.c) px = pk.price;
     const val = q * px * m;
     if (!(val > 0)) continue;
     const it: Item = {
