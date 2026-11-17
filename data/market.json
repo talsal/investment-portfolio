@@ -1,11 +1,11 @@
 {
   "schema": 1,
-  "generatedAt": "2026-11-14T02:25:59.294Z",
+  "generatedAt": "2026-11-17T04:29:04.409Z",
   "groups": {
     "fx": {
       "state": "ok",
-      "asof": "2026-11-13",
-      "fetchedAt": "2026-11-14T02:25:59.294Z",
+      "asof": "2026-11-16",
+      "fetchedAt": "2026-11-17T04:29:04.409Z",
       "source": "boi"
     },
     "quotes": {
@@ -38,7 +38,7 @@
   },
   "tickers": {},
   "fx": {
-    "usdIls": 3.199,
-    "asof": "2026-11-13"
+    "usdIls": 3.223,
+    "asof": "2026-11-16"
   }
 }
