@@ -1,11 +1,11 @@
 {
   "schema": 1,
-  "generatedAt": "2026-11-17T04:29:04.409Z",
+  "generatedAt": "2026-11-18T03:43:00.003Z",
   "groups": {
     "fx": {
       "state": "ok",
-      "asof": "2026-11-16",
-      "fetchedAt": "2026-11-17T04:29:04.409Z",
+      "asof": "2026-11-17",
+      "fetchedAt": "2026-11-18T03:43:00.003Z",
       "source": "boi"
     },
     "quotes": {
@@ -31,14 +31,14 @@
     },
     "cpi": {
       "state": "ok",
-      "asof": "2026-09-30",
-      "fetchedAt": "2026-11-12T02:57:58.649Z",
+      "asof": "2026-10-31",
+      "fetchedAt": "2026-11-18T03:43:00.003Z",
       "source": "cbs"
     }
   },
   "tickers": {},
   "fx": {
-    "usdIls": 3.223,
-    "asof": "2026-11-16"
+    "usdIls": 3.246,
+    "asof": "2026-11-17"
   }
 }
